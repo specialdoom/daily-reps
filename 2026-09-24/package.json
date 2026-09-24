@@ -1,0 +1,18 @@
+{
+  "name": "daily-rep-2026-09-24",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontend daily challenge — RxJS immutable todo store",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "rxjs": "7.8.1"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "3.2.4"
+  }
+}

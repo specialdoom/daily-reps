@@ -24,6 +24,17 @@ class EventEmitter<TEvents extends EventMap> {
     };
   }
 
+  once(
+    event: keyof TEvents,
+    handler: (payload: TEvents[keyof TEvents]) => void,
+  ) {
+    const listener = this.on(event, handler);
+
+    return {
+      unsubscribe: listener.unsubscribe,
+    };
+  }
+
   emit<K extends keyof TEvents>(event: K, payload: any) {
     const handlers = this.#listeners.get(event.toString());
 
@@ -34,18 +45,3 @@ class EventEmitter<TEvents extends EventMap> {
     });
   }
 }
-
-const eventEmitter = new EventEmitter<{
-  test: "testing";
-}>();
-
-const listener1 = eventEmitter.on("test", (payload) => {
-  console.log("it has been emited", payload);
-});
-const listener2 = eventEmitter.on("test", (payload) => {
-  console.log("it has been emited 2", payload);
-});
-
-listener1.unsubscribe();
-
-eventEmitter.emit("test", "testing");

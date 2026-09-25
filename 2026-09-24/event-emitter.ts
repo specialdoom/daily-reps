@@ -1,6 +1,6 @@
 export type EventMap = Record<string, any>;
 
-class EventEmitter<TEvents extends EventMap> {
+export class EventEmitter<TEvents extends EventMap> {
   #listeners = new Map<string, any[]>();
 
   private removeListener<K extends keyof TEvents>(

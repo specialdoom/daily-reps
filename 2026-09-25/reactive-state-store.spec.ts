@@ -16,7 +16,7 @@ describe("StateStore", () => {
     expect(store.getState()).toEqual({ count: 2, filter: "all" });
   });
 
-  it.skip("accepts a functional updater", () => {
+  it("accepts a functional updater", () => {
     const store = createStore({ count: 1, filter: "all" });
 
     store.setState((state) => ({

@@ -1,3 +1,5 @@
+// After review
+
 type Rule = {
   required?: boolean;
   minLength?: number;
@@ -8,70 +10,68 @@ type Rule = {
 
 type FormSchema = Record<string, Rule>;
 
-type FormValues = Record<keyof FormSchema, string>;
+type FormValues<S extends FormSchema> = { [K in keyof S]: string };
+type FormValidation<S extends FormSchema> = { [K in keyof S]: string | null };
 
-type FormValidation = Record<keyof FormSchema, string | null>;
-
-type FormValidator = {
-  validateField(fieldName: keyof FormSchema, value: string): string | null;
-  validateForm(values: FormValues): FormValidation;
-  isFormValid(values: FormValues): boolean;
-};
-
-export function createFormValidator(schema: FormSchema): FormValidator {
-  function required(value: string) {
-    if (!value.trim()) return true;
-
-    return !value;
+export function createFormValidator<S extends FormSchema>(schema: S) {
+  function isEmpty(value: string) {
+    return value.trim().length === 0;
   }
 
-  function validateField(fieldName: keyof FormSchema, value: string) {
-    const field = schema[fieldName];
+  function validateField<K extends keyof S>(
+    fieldName: K,
+    rawValue: string | undefined,
+  ): string | null {
+    const rule = schema[fieldName as string];
+    // Treat missing value as empty string (defensive)
+    const value = rawValue ?? "";
 
-    if (!field) {
+    if (!rule) {
+      // unknown field -> treat as valid (or throw if you prefer)
       return null;
     }
 
-    if (field.required && required(value)) {
-      return `Field ${fieldName} is required.`;
+    if (rule.required && isEmpty(value)) {
+      return `Field ${String(fieldName)} is required.`;
     }
 
-    if (field.minLength && value.length < field.minLength) {
-      return `Field ${fieldName} must be at least ${field.minLength} characters long.`;
+    if (rule.minLength !== undefined && value.length < rule.minLength) {
+      return `Field ${String(fieldName)} must be at least ${rule.minLength} characters long.`;
     }
 
-    if (field.maxLength && value.length > field.maxLength) {
-      return `Field ${fieldName} must be at most ${field.maxLength} characters long.`;
+    if (rule.maxLength !== undefined && value.length > rule.maxLength) {
+      return `Field ${String(fieldName)} must be at most ${rule.maxLength} characters long.`;
     }
 
-    if (field.pattern && !field.pattern.test(value)) {
-      return `Field ${fieldName} does not match the required pattern.`;
+    if (rule.pattern && !rule.pattern.test(value)) {
+      return `Field ${String(fieldName)} does not match the required pattern.`;
     }
 
-    if (field.custom) {
-      const customError = field.custom(value);
-      if (customError) {
-        return customError;
-      }
+    if (rule.custom) {
+      const customError = rule.custom(value);
+      if (customError) return customError;
     }
 
     return null;
   }
 
-  function validateForm(values: FormValues): FormValidation {
-    const errors: FormValidation = {};
+  function validateForm(values: Partial<FormValues<S>>): FormValidation<S> {
+    const errors = {} as FormValidation<S>;
 
-    Object.keys(schema).forEach((fieldName) => {
-      errors[fieldName] = validateField(fieldName, values[fieldName]);
+    // Iterate schema keys to ensure consistent result shape
+    (Object.keys(schema) as Array<keyof S>).forEach((k) => {
+      const v = (values as any)[k]; // could be undefined
+      errors[k] = validateField(k, v);
     });
 
     return errors;
   }
 
-  function isFormValid(values: FormValues) {
-    return Object.keys(schema).every((fieldName) => {
-      return !validateField(fieldName, values[fieldName]);
-    });
+  function isFormValid(values: Partial<FormValues<S>>): boolean {
+    const errors = validateForm(values);
+    return (Object.keys(errors) as Array<keyof S>).every(
+      (k) => errors[k] === null,
+    );
   }
 
   return {

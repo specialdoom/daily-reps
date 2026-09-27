@@ -55,7 +55,7 @@ export function createAsyncQueue(options: TaskQueueOptions = defaultOptions) {
 
       addWaitingTask(task);
 
-      run();
+      queueMicrotask(run);
     });
   }
 
@@ -120,12 +120,14 @@ export function createAsyncQueue(options: TaskQueueOptions = defaultOptions) {
   }
 
   function clear() {
-    waiting.forEach((tasks, key, _map) => {
-      tasks.forEach((task) => {
-        task.reject(new QueueClearedError());
-      });
-      waiting.delete(key);
-    });
+    queueMicrotask(() =>
+      waiting.forEach((tasks, key, _map) => {
+        tasks.forEach((task) => {
+          task.reject(new QueueClearedError());
+        });
+        waiting.delete(key);
+      }),
+    );
   }
 
   function pause() {

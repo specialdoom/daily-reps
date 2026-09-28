@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Theme Signal Engine Playground</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Theme Signal Engine</h1>
+      <p>Every color, gap and radius on this page is a CSS variable owned by the engine.</p>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Global theme <code>:root</code></h2>
+
+        <div class="presets">
+          <button data-preset="light">Light</button>
+          <button data-preset="dark">Dark</button>
+          <button data-preset="contrast">High contrast</button>
+        </div>
+
+        <div id="global-controls" class="controls"></div>
+
+        <div class="stats">
+          <div><span id="stat-calls">0</span><small>setToken calls</small></div>
+          <div><span id="stat-frames">0</span><small>rAF frames</small></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Scoped theme <code>#promo-card</code></h2>
+        <p class="hint">A second engine applied only to the card below. Its variables shadow the global ones inside the card and never touch <code>:root</code>.</p>
+
+        <div id="scoped-controls" class="controls"></div>
+
+        <div class="presets">
+          <button id="scoped-toggle">Destroy scoped engine</button>
+        </div>
+
+        <article id="promo-card" class="card">
+          <span class="badge">Scoped</span>
+          <h3>Promo card</h3>
+          <p>Change the scoped tokens and watch only this card react.</p>
+          <button class="primary">Primary action</button>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Preview</h2>
+        <article class="card">
+          <span class="badge">Global</span>
+          <h3>Regular card</h3>
+          <p>This card only reads variables from <code>:root</code>.</p>
+          <div class="row">
+            <button class="primary">Primary</button>
+            <button class="secondary">Secondary</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>SSR output <code>toCssString(":root")</code></h2>
+        <pre id="ssr-output"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>Subscriber log</h2>
+        <ol id="log" class="log"></ol>
+      </section>
+    </main>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

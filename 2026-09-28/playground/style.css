@@ -1,0 +1,168 @@
+/* Fallbacks only; the engine overrides these on :root as soon as it applies. */
+:root {
+  --colors-bg: #f8fafc;
+  --colors-surface: #ffffff;
+  --colors-text: #0f172a;
+  --colors-muted: #64748b;
+  --colors-border: #e2e8f0;
+  --colors-brand-primary: #3b82f6;
+  --colors-brand-secondary: #111827;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --radius-md: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--colors-bg);
+  color: var(--colors-text);
+  transition: background 0.2s, color 0.2s;
+}
+
+code {
+  font-size: 0.85em;
+  color: var(--colors-muted);
+}
+
+.app-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--colors-border);
+}
+
+.app-header h1 {
+  margin: 0 0 4px;
+}
+
+.app-header p,
+.hint {
+  margin: 0;
+  color: var(--colors-muted);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--colors-surface);
+  border: 1px solid var(--colors-border);
+  border-radius: var(--radius-md);
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px var(--spacing-sm);
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.controls label {
+  font-family: ui-monospace, monospace;
+  color: var(--colors-muted);
+}
+
+.presets,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: calc(var(--radius-md) / 2);
+  border: 1px solid var(--colors-border);
+  background: var(--colors-surface);
+  color: var(--colors-text);
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--colors-brand-primary);
+  border-color: var(--colors-brand-primary);
+  color: #fff;
+}
+
+button.secondary {
+  background: var(--colors-brand-secondary);
+  border-color: var(--colors-brand-secondary);
+  color: #fff;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--colors-bg);
+  color: var(--colors-text);
+  border: 1px solid var(--colors-border);
+  border-radius: var(--radius-md);
+}
+
+.card h3,
+.card p {
+  margin: 0;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--colors-brand-primary);
+  color: #fff;
+}
+
+.stats {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.stats div {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats span {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.stats small {
+  color: var(--colors-muted);
+}
+
+pre,
+.log {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: var(--spacing-sm);
+  font: 0.8rem ui-monospace, monospace;
+  background: var(--colors-bg);
+  border-radius: calc(var(--radius-md) / 2);
+}
+
+.log {
+  padding-left: 2.5em;
+}

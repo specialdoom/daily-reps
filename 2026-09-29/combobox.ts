@@ -14,7 +14,7 @@ export type OptionSource<T> =
 
 export interface ComboboxConfig<T> {
   id: string; // base id, caller-supplied (SSR-stable)
-  source: readonly ComboboxOption<T>[];
+  source: OptionSource<T>;
   selectionMode?: "single" | "multiple"; // default 'single'
   filter?: (option: ComboboxOption<T>, query: string) => boolean; // sync sources only; default: case-insensitive `includes`
   loop?: boolean; // wrap ArrowUp/Down at the ends, default true
@@ -64,7 +64,8 @@ export function createCombobox<T>({
   source,
   filter,
   loop = true,
-  selectionMode = 'single'
+  selectionMode = "single",
+  debounceMs = 150,
 }: ComboboxConfig<T>) {
   let state: ComboboxState<T> = {
     isOpen: false,
@@ -79,6 +80,8 @@ export function createCombobox<T>({
   const listeners = new Set<Listener<T>>();
   let abortController: AbortController | undefined;
   let debounceTimer: number | undefined;
+  let isComposing = false;
+  let announceTimer: number | undefined;
 
   function subscribe(listener: Listener<T>) {
     listeners.add(listener);
@@ -90,28 +93,23 @@ export function createCombobox<T>({
   function send(event: ComboboxEvent) {
     switch (event.type) {
       case "INPUT": {
-        let visibleOptions = source.filter((option) => {
-          if (filter) {
-            return filter(option, event.value);
-          }
-          return option.label.toLowerCase().includes(event.value.toLowerCase());
-        });
-        let activeId = state.activeId;
-        if (!visibleOptions.some((option) => option.id === state.activeId)) {
-          activeId = null;
+        if (isComposing) {
+          setState({ inputValue: event.value });
+          return;
         }
-        setState({
-          inputValue: event.value,
-          isOpen: true,
-          visibleOptions,
-          activeId,
-        });
+        filtering(event.value, { isOpen: true });
+        break;
       }
-
       case "KEYDOWN": {
+        if (event.isComposing || isComposing) return;
+
+        if (event.key === "ArrowDown" && event.altKey) {
+          if (!state.isOpen) open();
+          return;
+        }
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
           if (!state.isOpen) {
-            setState({ isOpen: true });
+            open();
           } else {
             const direction = event.key === "ArrowDown" ? 1 : -1;
             const nextId =
@@ -121,12 +119,129 @@ export function createCombobox<T>({
               activeId: nextId,
             });
           }
-        } else if(event.key === "Enter") {
-          if(selectionMode === 'single') {
-            state.selectedIds.add(activeId);
+        } else if (event.key === "Enter") {
+          if (selectionMode === "single" && state.activeId) {
+            const option = state.visibleOptions.find(
+              (option) => option.id === state.activeId,
+            );
+            setState({
+              selectedIds: new Set([state.activeId]),
+              inputValue: option?.label,
+              isOpen: false,
+            });
+          } else if (selectionMode === "multiple" && state.activeId) {
+            const selectedIds = new Set(state.selectedIds);
+            const option = state.visibleOptions.find(
+              (x) => x.id === state.activeId,
+            );
+
+            if (state.selectedIds.has(state.activeId)) {
+              selectedIds.delete(state.activeId);
+              setState({
+                selectedIds,
+                announcement: `${option?.label} deselected.`,
+              });
+            } else {
+              selectedIds.add(state.activeId);
+              setState({
+                selectedIds: selectedIds,
+                announcement: `${option?.label} selected.`,
+              });
+            }
           }
+        } else if (
+          (event.key === "Home" || event.key === "End") &&
+          state.isOpen
+        ) {
+          const direction = event.key === "Home" ? 1 : -1;
+
+          setState({
+            activeId: findNextEnabledId(null, direction),
+          });
+        } else if (event.key === "Escape") {
+          if (state.isOpen) {
+            setState({ isOpen: false });
+          } else {
+            setState({ inputValue: "" });
+          }
+        } else if (event.key === "Tab") {
+          setState({ isOpen: false });
         }
+        break;
       }
+      case "COMPOSITION_START": {
+        isComposing = true;
+        break;
+      }
+      case "COMPOSITION_END": {
+        isComposing = false;
+        filtering(event.value, { isOpen: true });
+        break;
+      }
+    }
+  }
+
+  function open() {
+    filtering(state.inputValue, { isOpen: true });
+  }
+
+  function filtering(value: string, patch?: Partial<ComboboxState<T>>) {
+    if (source instanceof Array) {
+      let visibleOptions = source.filter((option) => {
+        if (filter) {
+          return filter(option, value);
+        }
+        return option.label.toLowerCase().includes(value.toLowerCase());
+      });
+      let activeId = state.activeId;
+      if (!visibleOptions.some((option) => option.id === state.activeId)) {
+        activeId = null;
+      }
+      clearTimeout(announceTimer);
+      announceTimer = setTimeout(() => {
+        setState({ announcement: toResults(visibleOptions.length) });
+      }, debounceMs);
+      setState({
+        ...patch,
+        inputValue: value,
+        visibleOptions,
+        activeId,
+      });
+    } else {
+      const controller = new AbortController();
+      setState({ ...patch, inputValue: value, status: "loading" });
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        abortController?.abort();
+        abortController = controller;
+        source(value, controller.signal)
+          .then((value) => {
+            if (controller.signal.aborted) {
+              return;
+            }
+            let activeId = state.activeId;
+            if (!value.some((option) => option.id === state.activeId)) {
+              activeId = null;
+            }
+            setState({
+              visibleOptions: value,
+              status: "idle",
+              error: null,
+              activeId,
+              announcement: toResults(value.length),
+            });
+          })
+          .catch((error) => {
+            if (controller.signal.aborted) {
+              return;
+            }
+            setState({
+              status: "error",
+              error,
+              announcement: "Failed to get the results.",
+            });
+          });
+      }, debounceMs);
     }
   }
 
@@ -172,10 +287,18 @@ export function createCombobox<T>({
     return state;
   }
 
+  function toResults(count: number) {
+    if (count === 0) return "No results.";
+    if (count === 1) return "One result available.";
+
+    return `${count} results available.`;
+  }
+
   function destroy() {
     listeners.clear();
     abortController?.abort();
     if (debounceTimer) clearTimeout(debounceTimer);
+    if (announceTimer) clearTimeout(announceTimer);
   }
 
   return {

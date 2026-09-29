@@ -1,1 +1,123 @@
-testing
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Combobox Playground</title>
+    <style>
+      :root {
+        --bg: #f7f7f8;
+        --panel: #ffffff;
+        --text: #1d1d1f;
+        --muted: #6b6b73;
+        --border: #d9d9de;
+        --accent: #3b5bdb;
+        --active: #e7ecff;
+        --selected: #2b8a3e;
+        --error: #c92a2a;
+        font-family: system-ui, sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141416;
+          --panel: #1e1e22;
+          --text: #ececf1;
+          --muted: #9a9aa5;
+          --border: #34343b;
+          --accent: #748ffc;
+          --active: #28304d;
+          --selected: #69db7c;
+          --error: #ff8787;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        background: var(--bg);
+        color: var(--text);
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .hint { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+      .demos {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 16px;
+      }
+      .demo {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        min-width: 0;
+      }
+      .demo h2 { font-size: 15px; margin: 0 0 4px; }
+      .demo p.desc { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+      .controls { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; margin-bottom: 10px; }
+      .field { position: relative; }
+      .field input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        font-size: 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .field input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+      .status { font-size: 12px; margin-top: 6px; min-height: 16px; color: var(--muted); }
+      .status.error { color: var(--error); }
+      ul[role="listbox"] {
+        list-style: none;
+        margin: 4px 0 0;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        max-height: 180px;
+        overflow: auto;
+      }
+      ul[role="listbox"][hidden] { display: none; }
+      li[role="option"] {
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+      }
+      li[role="option"][data-active="true"] { background: var(--active); }
+      li[role="option"][aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+      li[role="option"] .check { color: var(--selected); }
+      .empty { color: var(--muted); font-size: 13px; padding: 6px 8px; }
+      .live {
+        font-size: 12px;
+        margin-top: 10px;
+        padding: 6px 8px;
+        border-left: 3px solid var(--accent);
+        background: var(--bg);
+        min-height: 16px;
+      }
+      details { margin-top: 10px; font-size: 12px; }
+      summary { cursor: pointer; color: var(--muted); }
+      pre {
+        margin: 6px 0 0;
+        padding: 8px;
+        background: var(--bg);
+        border-radius: 6px;
+        overflow: auto;
+        max-height: 220px;
+        font-size: 11px;
+      }
+      .meta { font-size: 11px; color: var(--muted); margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Combobox playground</h1>
+    <p class="hint">
+      Keyboard: ↑/↓, Alt+↓, Home/End, Enter, Escape, Tab. Every event sent to the
+      core is logged, along with the notification count and the state after each notification.
+    </p>
+    <div class="demos" id="demos"></div>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>

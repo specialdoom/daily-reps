@@ -160,9 +160,9 @@ export function createCombobox<T>({
           });
         } else if (event.key === "Escape") {
           if (state.isOpen) {
-            setState({ isOpen: false });
+            setState({ isOpen: false, announcement: "" });
           } else {
-            setState({ inputValue: "" });
+            setState({ inputValue: "", announcement: "" });
           }
         } else if (event.key === "Tab") {
           setState({ isOpen: false });

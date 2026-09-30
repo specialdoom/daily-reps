@@ -1,7 +1,8 @@
 <script lang="ts">
+  import type { ListItemId } from "../store.svelte";
   import type { TaskStore } from "./task";
 
-  let { id, store }: { id: number | string; store: TaskStore } = $props();
+  let { id, store }: { id: ListItemId; store: TaskStore } = $props();
 
   // getItem subscribes this row to its own key only, so other rows' changes never reach it.
   const item = $derived(store.getItem(id));

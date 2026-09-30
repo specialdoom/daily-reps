@@ -94,15 +94,18 @@ describe("reading", () => {
     ]);
   });
 
-  it("state returns a fresh array on every read", () => {
+  it("state keeps the same array until an item is added or removed", () => {
     const store = createStore(2);
     const before = store.state;
 
-    store.addItem(task("new"));
+    store.updateField(0, "title", "changed");
+    store.setIsSelected(1, true);
+    expect(store.state).toBe(before);
 
+    store.addItem(task("new"));
+    expect(store.state).not.toBe(before);
     expect(before).toHaveLength(2);
     expect(store.state).toHaveLength(3);
-    expect(store.state).not.toBe(store.state);
   });
 
   it("getItem returns null for an unknown id", () => {
@@ -176,6 +179,37 @@ describe("setIsSelected", () => {
     const store = createStore(1);
 
     expect(() => store.setIsSelected(99, true)).not.toThrow();
+  });
+});
+
+describe("return values", () => {
+  it("write methods report whether the item existed", () => {
+    const store = createStore(1);
+
+    expect(store.updateField(0, "title", "x")).toBe(true);
+    expect(store.updateField(99, "title", "x")).toBe(false);
+    expect(store.setIsSelected(0, true)).toBe(true);
+    expect(store.setIsSelected(99, true)).toBe(false);
+    expect(store.removeItem(0)).toBe(true);
+    expect(store.removeItem(0)).toBe(false);
+  });
+});
+
+describe("types", () => {
+  it("only accepts object data and exposes items as read-only", () => {
+    // @ts-expect-error $state can't track fields of a primitive
+    createListStore<number>();
+
+    const store = createStore(1);
+    const item = store.getItem(0)!;
+    expect(() => {
+      // @ts-expect-error the id must stay equal to the map key
+      item.id = 5;
+      // @ts-expect-error writes go through setIsSelected
+      item.isSelected = true;
+      // @ts-expect-error writes go through updateField
+      item.data.title = "x";
+    }).toBeDefined();
   });
 });
 
@@ -272,6 +306,27 @@ describe("fine-grained reactivity", () => {
 
     expect(reader.runs).toBe(2);
     expect(store.getItem(0)?.data.priority).toBe(5);
+  });
+
+  it("write methods don't subscribe the effect that calls them", () => {
+    const store = createStore(1);
+    let runs = 0;
+    cleanups.push(
+      $effect.root(() => {
+        $effect(() => {
+          runs++;
+          store.updateField(0, "priority", 1);
+          store.setIsSelected(0, true);
+        });
+      }),
+    );
+    flushSync();
+
+    store.updateField(0, "title", "changed");
+    store.removeItem(0);
+    flushSync();
+
+    expect(runs).toBe(1);
   });
 
   it("re-runs a row reader with null when its item is removed", () => {
@@ -382,9 +437,9 @@ describe("derivedFilter", () => {
 
   it("recomputes once for 5 synchronous updates", () => {
     const store = createStore(100);
-    let passes = 0;
+    let calls = 0;
     const high = store.derivedFilter((item) => {
-      if (item.id === 0) passes++;
+      if (item.id === 99) calls++;
       return item.data.priority >= 98;
     });
     const reader = track(() => high.current.length);
@@ -393,7 +448,65 @@ describe("derivedFilter", () => {
     flushSync();
 
     expect(reader.runs).toBe(2);
-    expect(passes).toBe(2);
+    expect(calls).toBe(2);
     expect(high.current.map((item) => item.id)).toEqual([98]);
+  });
+
+  it("re-runs the predicate only for the item that changed", () => {
+    const store = createStore(1000);
+    const calls = new Map<number, number>();
+    const high = store.derivedFilter((item) => {
+      calls.set(item.id, (calls.get(item.id) ?? 0) + 1);
+      return item.data.priority >= 998;
+    });
+    track(() => high.current.length);
+    calls.clear();
+
+    store.updateField(500, "priority", 999);
+    flushSync();
+
+    expect([...calls]).toEqual([[500, 1]]);
+    expect(high.current.map((item) => item.id)).toEqual([500, 998, 999]);
+  });
+
+  it("keeps the same array when the members don't change", () => {
+    const store = createStore(10);
+    const selected = store.derivedFilter((item) => item.isSelected);
+    store.setIsSelected(3, true);
+    const reader = track(() => selected.current);
+    const before = selected.current;
+
+    // A predicate field toggled back within the same tick.
+    store.setIsSelected(5, true);
+    store.setIsSelected(5, false);
+    // Items that don't match being added and removed.
+    store.addItem(task("new"));
+    store.removeItem(0);
+    flushSync();
+
+    expect(selected.current).toBe(before);
+    expect(reader.runs).toBe(1);
+  });
+
+  it("tracks items added after the filter was created", () => {
+    // Regression: Svelte doesn't track a derived in the reaction run that created
+    // it, so creating and reading item memberships in one derived missed these.
+    const store = createStore(2);
+    const selected = store.derivedFilter((item) => item.isSelected);
+    const reader = track(() => selected.current.length);
+
+    const id = store.addItem(task("new"));
+    flushSync();
+    store.setIsSelected(id, true);
+    flushSync();
+
+    expect(reader.runs).toBe(2);
+    expect(selected.current.map((item) => item.id)).toEqual([id]);
+
+    store.setIsSelected(id, false);
+    flushSync();
+
+    expect(reader.runs).toBe(3);
+    expect(selected.current).toEqual([]);
   });
 });

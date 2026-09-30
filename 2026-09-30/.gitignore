@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Emitted by `tsc -p tsconfig.node.json` during `npm run check`
+vite.config.js
+vite.config.d.ts

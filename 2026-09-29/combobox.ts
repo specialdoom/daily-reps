@@ -201,9 +201,9 @@ export function createCombobox<T>({
     filtering(state.inputValue, { isOpen: true });
   }
 
-  function close() {
+  function close(patch?: Partial<ComboboxState<T>>) {
     cancelPending();
-    setState({ isOpen: false, announcement: "", status: "idle" });
+    setState({ ...patch, isOpen: false, announcement: "", status: "idle" });
   }
 
   function filtering(value: string, patch?: Partial<ComboboxState<T>>) {
@@ -324,11 +324,7 @@ export function createCombobox<T>({
     if (selectionMode === "single") {
       selectedOptions.clear();
       selectedOptions.set(option.id, option);
-      setState({
-        selectedIds: new Set([id]),
-        inputValue: option?.label,
-        isOpen: false,
-      });
+      close({ selectedIds: new Set([id]), inputValue: option?.label });
       onChange?.(getSelectedOptions());
     } else if (selectionMode === "multiple") {
       const selectedIds = new Set(state.selectedIds);

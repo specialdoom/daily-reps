@@ -11,5 +11,5 @@
     "checkJs": false
   },
   "include": ["**/*.js", "**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "before-review"]
 }

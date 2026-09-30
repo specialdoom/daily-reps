@@ -125,7 +125,7 @@ function mount(spec: DemoSpec) {
     events.unshift(JSON.stringify(event));
     events.length = Math.min(events.length, 25);
     eventsPre.textContent = events.join("\n");
-    combobox.send(event);
+    return combobox.send(event);
   }
 
   // DOM → core
@@ -141,28 +141,14 @@ function mount(spec: DemoSpec) {
   input.addEventListener("focus", () => send({ type: "FOCUS" }));
   input.addEventListener("blur", () => send({ type: "BLUR" }));
   input.addEventListener("keydown", (e) => {
-    const { isOpen } = combobox.getState();
-    const handledWhileOpen = [
-      "ArrowDown",
-      "ArrowUp",
-      "Enter",
-      "Escape",
-      "Home",
-      "End",
-    ];
-    if (
-      e.key === "ArrowDown" ||
-      e.key === "ArrowUp" ||
-      (isOpen && handledWhileOpen.includes(e.key))
-    ) {
-      if (!e.isComposing) e.preventDefault();
-    }
-    send({
+    // The core decides which keys it handled, so the key rules live in one place.
+    const handled = send({
       type: "KEYDOWN",
       key: e.key,
       isComposing: e.isComposing,
       altKey: e.altKey,
     });
+    if (handled) e.preventDefault();
   });
 
   // Delegated option events; ids are parsed back from the DOM id.
@@ -172,6 +158,9 @@ function mount(spec: DemoSpec) {
     );
     return li?.dataset.optionId;
   };
+  // Keep focus in the input while clicking options, so the input never blurs
+  // (and multi-select keeps working from the keyboard after a click).
+  listbox.addEventListener("mousedown", (e) => e.preventDefault());
   listbox.addEventListener("pointerdown", (e) => {
     const optionId = optionIdFrom(e.target);
     if (optionId) send({ type: "OPTION_POINTERDOWN", id: optionId });

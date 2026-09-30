@@ -52,7 +52,7 @@ export type Listener<T> = (s: Readonly<ComboboxState<T>>) => void;
 export interface Combobox<T> {
   getState(): Readonly<ComboboxState<T>>; // same reference until something changes
   subscribe(listener: Listener<T>): () => void;
-  send(event: ComboboxEvent): void;
+  send(event: ComboboxEvent): boolean; // true = handled, adapter should call preventDefault()
   getInputProps(): Record<string, string | number | boolean | undefined>;
   getListboxProps(): Record<string, string | number | boolean | undefined>;
   getOptionProps(
@@ -71,6 +71,8 @@ export function createCombobox<T>({
   debounceMs = 150,
   onChange,
 }: ComboboxConfig<T>): Combobox<T> {
+  // Shared empty list, so resetting the options is a no-op when they're already empty.
+  const noOptions: readonly ComboboxOption<T>[] = [];
   let state: ComboboxState<T> = {
     isOpen: false,
     inputValue: "",
@@ -78,16 +80,21 @@ export function createCombobox<T>({
     selectedIds: new Set(),
     status: "idle",
     error: null,
-    visibleOptions: [],
+    visibleOptions: noOptions,
     announcement: "",
   };
   const listeners = new Set<Listener<T>>();
   let abortController: AbortController | undefined;
-  let debounceTimer: number | undefined;
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let announceTimer: ReturnType<typeof setTimeout> | undefined;
+  let pointerTimer: ReturnType<typeof setTimeout> | undefined;
   let isComposing = false;
-  let announceTimer: number | undefined;
-  let selectedOptions = new Map<string, ComboboxOption<T>>();
   let isPointerDown = false;
+  let isDestroyed = false;
+  const selectedOptions = new Map<string, ComboboxOption<T>>();
+  let indexCache:
+    | { options: readonly ComboboxOption<T>[]; byId: Map<string, number> }
+    | undefined;
 
   function subscribe(listener: Listener<T>) {
     listeners.add(listener);
@@ -96,128 +103,179 @@ export function createCombobox<T>({
     };
   }
 
-  function send(event: ComboboxEvent) {
+  function send(event: ComboboxEvent): boolean {
+    if (isDestroyed) return false;
+
     switch (event.type) {
       case "INPUT": {
         if (isComposing) {
           setState({ inputValue: event.value });
-          return;
+          return false;
         }
         filtering(event.value, { isOpen: true });
-        break;
+        return false;
       }
       case "KEYDOWN": {
-        if (event.isComposing || isComposing) return;
-
-        if (event.key === "ArrowDown" && event.altKey) {
-          if (!state.isOpen) open();
-          return;
-        }
-        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-          if (!state.isOpen) {
-            open();
-          } else {
-            const direction = event.key === "ArrowDown" ? 1 : -1;
-            const nextId =
-              findNextEnabledId(state.activeId, direction) ?? state.activeId;
-
-            setState({
-              activeId: nextId,
-            });
-          }
-        } else if (event.key === "Enter") {
-          if (state.activeId) selectOption(state.activeId);
-        } else if (
-          (event.key === "Home" || event.key === "End") &&
-          state.isOpen
-        ) {
-          const direction = event.key === "Home" ? 1 : -1;
-
-          setState({
-            activeId: findNextEnabledId(null, direction),
-          });
-        } else if (event.key === "Escape") {
-          if (state.isOpen) {
-            close();
-          } else {
-            setState({ inputValue: "", announcement: "" });
-          }
-        } else if (event.key === "Tab") {
-          close();
-        }
-        break;
+        return keydown(event);
       }
       case "COMPOSITION_START": {
         isComposing = true;
-        break;
+        return false;
       }
       case "COMPOSITION_END": {
         isComposing = false;
         filtering(event.value, { isOpen: true });
-        break;
+        return false;
       }
       case "OPTION_CLICK": {
         isPointerDown = false;
         selectOption(event.id);
-        break;
+        return false;
       }
       case "OPTION_POINTERDOWN": {
+        // The only blur this may excuse is the one the same click causes, which the
+        // browser fires in the same task. Expire the flag on the next task so it can
+        // never swallow a later, genuine blur (drag-off, or an adapter that keeps
+        // focus with mousedown.preventDefault() and so never blurs at all).
         isPointerDown = true;
-        break;
+        clearTimeout(pointerTimer);
+        pointerTimer = setTimeout(() => {
+          isPointerDown = false;
+        }, 0);
+        return false;
       }
       case "BLUR": {
+        isComposing = false;
         if (isPointerDown) {
           isPointerDown = false;
         } else {
           close();
         }
-        break;
+        return false;
       }
       case "OPTION_HOVER": {
         const option = getSelectableOption(event.id);
-        if (!option) return;
+        if (!option) return false;
 
         setState({
           activeId: option.id,
         });
-        break;
+        return false;
       }
       case "OPEN": {
         open();
-        break;
+        return false;
       }
       case "CLOSE": {
         close();
-        break;
+        return false;
       }
       case "FOCUS": {
         isComposing = false;
-        break;
+        return false;
       }
     }
   }
 
+  function keydown(event: Extract<ComboboxEvent, { type: "KEYDOWN" }>) {
+    if (event.isComposing || isComposing) return false;
+
+    switch (event.key) {
+      case "ArrowDown":
+      case "ArrowUp": {
+        if (!state.isOpen) {
+          open();
+        } else if (!(event.altKey && event.key === "ArrowDown")) {
+          // Alt+ArrowDown only opens; it never moves the active option.
+          const direction = event.key === "ArrowDown" ? 1 : -1;
+          const nextId =
+            findNextEnabledId(state.activeId, direction) ?? state.activeId;
+
+          setState({
+            activeId: nextId,
+          });
+        }
+        return true;
+      }
+      case "Enter": {
+        // Only while open: a closed popup has no visible active option, and the
+        // Enter must be left alone so it can submit the surrounding form.
+        if (!state.isOpen || !state.activeId) return false;
+
+        selectOption(state.activeId);
+        return true;
+      }
+      case "Home":
+      case "End": {
+        // While closed, leave Home/End to the native caret.
+        if (!state.isOpen) return false;
+
+        const direction = event.key === "Home" ? 1 : -1;
+        setState({
+          activeId: findNextEnabledId(null, direction),
+        });
+        return true;
+      }
+      case "Escape": {
+        if (state.isOpen) {
+          close();
+          return true;
+        }
+        if (state.inputValue === "") return false;
+
+        setState({
+          inputValue: "",
+          visibleOptions: noOptions,
+          activeId: null,
+          announcement: "",
+        });
+        return true;
+      }
+      case "Tab": {
+        close();
+        return false;
+      }
+      default:
+        return false;
+    }
+  }
+
   function open() {
+    if (state.isOpen) return;
+
     filtering(state.inputValue, { isOpen: true });
   }
 
   function close(patch?: Partial<ComboboxState<T>>) {
     cancelPending();
-    setState({ ...patch, isOpen: false, announcement: "", status: "idle" });
+    setState({
+      ...patch,
+      isOpen: false,
+      activeId: null,
+      announcement: "",
+      status: "idle",
+      error: null,
+    });
   }
 
   function filtering(value: string, patch?: Partial<ComboboxState<T>>) {
-    if (source instanceof Array) {
-      let visibleOptions = source.filter((option) => {
+    if (isOptionList(source)) {
+      const query = value.toLowerCase();
+      const matches = source.filter((option) => {
         if (filter) {
           return filter(option, value);
         }
-        return option.label.toLowerCase().includes(value.toLowerCase());
+        return option.label.toLowerCase().includes(query);
       });
-      let activeId = state.activeId;
-      if (!visibleOptions.some((option) => option.id === state.activeId)) {
-        activeId = null;
-      }
+      // Keep the previous array when the result is unchanged, so setState sees no change.
+      const visibleOptions = isSameOptions(matches, state.visibleOptions)
+        ? state.visibleOptions
+        : matches;
+      const activeId = visibleOptions.some(
+        (option) => option.id === state.activeId,
+      )
+        ? state.activeId
+        : null;
       clearTimeout(announceTimer);
       announceTimer = setTimeout(() => {
         setState({ announcement: toResults(visibleOptions.length) });
@@ -229,30 +287,35 @@ export function createCombobox<T>({
         activeId,
       });
     } else {
+      const fetchOptions = source;
       const controller = new AbortController();
       setState({ ...patch, inputValue: value, status: "loading" });
       clearTimeout(debounceTimer);
       abortController?.abort();
       debounceTimer = setTimeout(() => {
         abortController = controller;
-        source(value, controller.signal)
-          .then((value) => {
+        // Promise.resolve().then(...) turns a fetcher that throws synchronously
+        // into a rejection, so it lands in .catch instead of leaving status "loading".
+        Promise.resolve()
+          .then(() => fetchOptions(value, controller.signal))
+          .then((results) => {
             if (controller.signal.aborted) {
               return;
             }
-            let activeId = state.activeId;
-            if (!value.some((option) => option.id === state.activeId)) {
-              activeId = null;
-            }
+            const activeId = results.some(
+              (option) => option.id === state.activeId,
+            )
+              ? state.activeId
+              : null;
             setState({
-              visibleOptions: value,
+              visibleOptions: results,
               status: "idle",
               error: null,
               activeId,
-              announcement: toResults(value.length),
+              announcement: toResults(results.length),
             });
           })
-          .catch((error) => {
+          .catch((error: unknown) => {
             if (controller.signal.aborted) {
               return;
             }
@@ -266,9 +329,34 @@ export function createCombobox<T>({
     }
   }
 
+  // Array.isArray doesn't narrow readonly arrays out of a union, hence the guard.
+  function isOptionList(
+    value: OptionSource<T>,
+  ): value is readonly ComboboxOption<T>[] {
+    return Array.isArray(value);
+  }
+
+  function isSameOptions(
+    a: readonly ComboboxOption<T>[],
+    b: readonly ComboboxOption<T>[],
+  ) {
+    return a.length === b.length && a.every((option, i) => option === b[i]);
+  }
+
+  function indexOfOption(id: string | null) {
+    if (id === null) return -1;
+    if (indexCache?.options !== state.visibleOptions) {
+      indexCache = {
+        options: state.visibleOptions,
+        byId: new Map(state.visibleOptions.map((option, i) => [option.id, i])),
+      };
+    }
+    return indexCache.byId.get(id) ?? -1;
+  }
+
   function findNextEnabledId(fromId: string | null, direction: 1 | -1) {
     const visibleOptions = state.visibleOptions;
-    let fromIndex = visibleOptions.findIndex((option) => option.id === fromId);
+    let fromIndex = indexOfOption(fromId);
     const length = visibleOptions.length;
 
     if (fromIndex === -1 && direction === -1) {
@@ -309,7 +397,7 @@ export function createCombobox<T>({
   }
 
   function getSelectableOption(id: string): ComboboxOption<T> | undefined {
-    const option = state.visibleOptions.find((option) => option.id === id);
+    const option = state.visibleOptions[indexOfOption(id)];
 
     if (!option || option.disabled) return undefined;
 
@@ -322,27 +410,35 @@ export function createCombobox<T>({
     if (!option) return;
 
     if (selectionMode === "single") {
+      const isAlreadySelected =
+        state.selectedIds.size === 1 && state.selectedIds.has(id);
+
+      if (isAlreadySelected) {
+        close({ inputValue: option.label });
+        return;
+      }
       selectedOptions.clear();
       selectedOptions.set(option.id, option);
-      close({ selectedIds: new Set([id]), inputValue: option?.label });
+      close({ selectedIds: new Set([id]), inputValue: option.label });
       onChange?.(getSelectedOptions());
-    } else if (selectionMode === "multiple") {
+    } else {
+      // A results announcement still pending would overwrite this one.
+      clearTimeout(announceTimer);
       const selectedIds = new Set(state.selectedIds);
-      if (option.disabled) return;
 
       if (state.selectedIds.has(id)) {
         selectedIds.delete(id);
         selectedOptions.delete(option.id);
         setState({
           selectedIds,
-          announcement: `${option?.label} deselected.`,
+          announcement: `${option.label} deselected.`,
         });
       } else {
         selectedOptions.set(option.id, option);
         selectedIds.add(id);
         setState({
-          selectedIds: selectedIds,
-          announcement: `${option?.label} selected.`,
+          selectedIds,
+          announcement: `${option.label} selected.`,
         });
       }
       onChange?.(getSelectedOptions());
@@ -361,8 +457,10 @@ export function createCombobox<T>({
   }
 
   function destroy() {
+    isDestroyed = true;
     listeners.clear();
     cancelPending();
+    clearTimeout(pointerTimer);
   }
 
   function cancelPending() {
@@ -379,7 +477,7 @@ export function createCombobox<T>({
     return {
       role: "combobox",
       "aria-expanded": state.isOpen,
-      "aria-controls": `${configId}-listbox`,
+      "aria-controls": getListboxId(),
       "aria-activedescendant": activedescendant,
       "aria-busy": state.status === "loading",
       "aria-autocomplete": "list",
@@ -387,28 +485,30 @@ export function createCombobox<T>({
   }
 
   function getOptionProps(id: string) {
-    const optionIndex = state.visibleOptions.findIndex(
-      (option) => option.id === id,
-    );
-    const isDisabled = state.visibleOptions[optionIndex]?.disabled;
+    const optionIndex = indexOfOption(id);
+    const isKnown = optionIndex !== -1;
 
     return {
       role: "option",
       id: getOptionId(id),
       "aria-selected": state.selectedIds.has(id),
-      "aria-disabled": isDisabled,
+      "aria-disabled": state.visibleOptions[optionIndex]?.disabled,
       "data-active": state.activeId === id,
-      "aria-setsize": state.visibleOptions.length,
-      "aria-posinset": optionIndex + 1,
+      "aria-setsize": isKnown ? state.visibleOptions.length : undefined,
+      "aria-posinset": isKnown ? optionIndex + 1 : undefined,
     };
   }
 
   function getListboxProps() {
     return {
       role: "listbox",
-      id: `${configId}-listbox`,
+      id: getListboxId(),
       "aria-multiselectable": selectionMode === "multiple",
     };
+  }
+
+  function getListboxId() {
+    return `${configId}-listbox`;
   }
 
   function getOptionId(id: string) {

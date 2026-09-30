@@ -24,8 +24,8 @@ describe("SSR", () => {
 
   it("produces the same ids for every request, like the browser will", () => {
     const renderRequest = () => {
-      const store = createListStore<string>();
-      return ["a", "b", "c"].map((title) => store.addItem(title));
+      const store = createListStore<{ title: string }>();
+      return ["a", "b", "c"].map((title) => store.addItem({ title }));
     };
 
     expect(renderRequest()).toEqual([0, 1, 2]);

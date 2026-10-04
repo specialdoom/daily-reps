@@ -1,6 +1,6 @@
 ---
 name: daily-challenge
-description: Generates one new daily frontend engineering challenge into a `YYYY-MM-DD/README.md` folder in this repo and commits it to main. By default the challenge is small and focused on a single concept (about 30–60 minutes); big topics become a multi-day series of focused parts. Pass `complex` (e.g. "complex challenge on X", "/daily-challenge complex") for one larger challenge made of several small, independently solvable parts. Use when the user asks for a new challenge, "today's challenge", "another problem", "generate a challenge (on <topic>)", the next part of a series, or a challenge for a specific date. Also used by the scheduled daily routine. Do NOT use for solving, testing, or reviewing an existing challenge.
+description: Generates one new daily frontend engineering challenge into a `YYYY-MM-DD/README.md` folder in this repo and commits it to main. Varies the format (library, component, small app, real-time app, change inside an existing app, HTML/CSS only, debugging) and the stack, often surprising with a post-2018 framework. By default the challenge is small and focused on a single concept (about 30–60 minutes); big topics become a multi-day series of focused parts. Pass `complex` (e.g. "complex challenge on X", "/daily-challenge complex") for one larger challenge made of several small, independently solvable parts. Use when the user asks for a new challenge, "today's challenge", "another problem", "generate a challenge (on <topic>)", the next part of a series, or a challenge for a specific date. Also used by the scheduled daily routine. Do NOT use for solving, testing, or reviewing an existing challenge.
 ---
 
 # Daily Challenge
@@ -31,15 +31,37 @@ Read these from the request or the skill arguments. All are optional.
 ## 2. Pick the topic
 
 1. **Continue an unfinished series first.** Check the most recent date folder. If its README has a `Series:` line saying `Part N of M` with N < M, the new challenge is Part N+1 of that series, unless the user asked for a different topic.
-2. Otherwise, read the `README.md` of the most recent ~10 date folders. Choose a domain and framework that differs from the last few days, unless the user asked for a specific topic.
-3. Rotate across these domains:
+2. Otherwise, read the `README.md` of the most recent ~10 date folders. They show which domain, format and stack each day used. Pick a **domain**, a **format** and a **stack** that each differ from the last few days, unless the user asked for something specific. Don't repeat any single one of the three two days in a row.
+3. **Domains** (what the challenge is about):
    - **Modern JS/TS**: advanced types, generics, async patterns, event loop, Proxy, iterators.
-   - **Core web standards & CSS**: container queries, subgrid, specificity, `@layer`, paint/layout performance, modern DOM APIs.
-   - **Framework mechanics & state primitives**: Svelte runes, Angular signals/RxJS, React RSC/hooks, Vue 3 Composition API, immutability, deep nested updates.
-   - **Architecture & SSR**: hydration boundaries, micro-frontends, islands, Web Vitals, profiling, SEO, bundle splitting, memory leaks.
-   - **Design systems & components**: tokens, Storybook, visual regression, accessibility/WCAG, compound components, headless UI.
-   - **Testing & tooling**: Vitest/Jest, Playwright, CI/CD, Nx/Turborepo, Vite/webpack optimization.
-4. The challenge must be solvable in TypeScript and testable with Vitest. That matches the repo's convention: solution folders later get `package.json`, `tsconfig.json`, `<name>.ts` and `<name>.spec.ts`.
+   - **HTML & semantics**: forms and constraint validation, `<dialog>`, popover API, `<details>`, landmarks, `inert`, native lazy loading, microdata and SEO markup.
+   - **CSS**: layout (grid, subgrid, flexbox), container and style queries, `:has()`, cascade layers, nesting, custom properties, scroll-driven animations, view transitions, logical properties, responsive type.
+   - **Core web APIs & performance**: IntersectionObserver and ResizeObserver, Web Workers, Streams, the Cache API, paint and layout performance, Web Vitals.
+   - **Real-time**: WebSockets, Server-Sent Events, WebRTC data channels, `BroadcastChannel`, presence, optimistic updates, reconnection and backoff, conflict resolution (e.g. CRDT basics).
+   - **Framework mechanics & state primitives**: signals, runes, hooks, the Composition API, RxJS, immutability, deep nested updates.
+   - **Architecture & SSR**: hydration boundaries, islands, streaming SSR, server components, micro-frontends, bundle splitting, memory leaks.
+   - **Design systems & accessibility**: tokens, compound and headless components, WCAG, keyboard and screen-reader behaviour, visual regression.
+   - **Testing & tooling**: Vitest, Playwright, MSW, CI, monorepos, Vite and bundler plugins.
+4. **Formats** (what the owner builds):
+   - **Library / function**: a pure TypeScript module with a Vitest suite. This is the format so far; don't let it dominate.
+   - **Component**: one UI component in the chosen stack, e.g. a disclosure, a toast queue or a range slider.
+   - **Small app**: one screen with 1–2 interactions, e.g. a live search or a kanban column with drag and drop. Keep it to a single concept.
+   - **Real-time app**: a small client for a live feature, e.g. chat presence, a live cursor or a ticker with reconnect. Provide a tiny mock server (a few lines with `ws`, an SSE endpoint, or `BroadcastChannel` between tabs) so the challenge stays about the client.
+   - **Inside an existing app**: give a short starter app in the README, e.g. a 30–80 line component tree. The task is one change inside it: add a feature, fix a described bug, refactor, or find and fix a performance or accessibility problem.
+   - **HTML/CSS only**: build or fix a layout, component or animation with no JavaScript, or with almost none.
+   - **Debug / review**: give a short buggy or slow snippet, describe the symptoms, and ask for the root cause and the fix.
+5. **Stacks**: rotate between vanilla TS/HTML/CSS, the established frameworks (React, Vue, Angular, Svelte) and newer ones.
+   - **Surprise roughly every third challenge** with a framework or tool released or popularised **after 2018** that hasn't appeared in the repo yet, so the owner stays current. Check what has been used with `grep -h 'Stack:' */README.md`. For example:
+     - frameworks: SolidJS, Qwik, Astro, Svelte 5, Lit, htmx, Alpine.js, Preact Signals;
+     - meta-frameworks: Fresh, SolidStart, TanStack Start or Router, React Router 7 / Remix, Next.js App Router, Nuxt 3, Analog, Angular signals;
+     - runtimes and servers: Hono, Elysia, Bun, Deno;
+     - other: Tauri, Effect.
+   - Don't name the surprise framework in advance or in the series plan. Do give it a short "Why this framework" note: one or two sentences on what's distinctive about it, plus a link to its official docs.
+   - Prefer a current stable version. Check the latest version (e.g. `npm view <pkg> version`) when network access allows, and state the version the challenge targets.
+6. **How it's checked** depends on the format:
+   - Library, component and real-time challenges should be testable with Vitest, using jsdom or a mock socket where needed.
+   - App, HTML/CSS and inside-an-app challenges list concrete acceptance criteria the owner can check in the browser. Where it fits, add Playwright checks: what to click, and what must be visible, focused or announced.
+   - Either way, the solution folder later holds a runnable project: `package.json`, the source, and tests or a Playwright spec.
 
 ## 3. Size it: one concept per challenge
 
@@ -47,7 +69,8 @@ In `focused` mode, every challenge must pass all of these checks:
 
 - **One core concept.** You can name it in a few words, e.g. "abortable debounce", "LRU eviction order", "`aria-activedescendant` focus model" or "signal dependency tracking". If you need "and" to describe it, it's two challenges.
 - **About 30–60 minutes** for a strong engineer.
-- **One function, class or hook** in the public API, with at most ~3 public methods. The solution is roughly 40–150 lines.
+- **Small surface.** For a library, one function, class or hook with at most ~3 public methods. For a component or app, one screen with 1–2 interactions. For an inside-an-app task, one change. The solution is roughly 40–150 lines, plus markup and CSS for UI formats.
+- **Setup must be trivial.** Anything beyond `npm create …` plus one or two packages goes into the README as a provided starter or stub.
 - **3–5 requirements** and **2–3 edge cases**. Every one of them must exercise the core concept, not neighbouring features.
 - **Stub what isn't the point.** Give a type or a one-line helper instead of asking for it. For example, provide the `Priority` type and an injected clock, and ask only for the ordering logic.
 
@@ -66,6 +89,7 @@ In `focused` mode, every challenge must pass all of these checks:
 ### **Daily Frontend Challenge: [<Topic Category>] <Title>**
 
 > **Focus:** <the one concept, in a few words> · **Time box:** ~<30–60> min
+> **Format:** <Library | Component | Small app | Real-time app | Inside an existing app | HTML/CSS only | Debug / review> · **Stack:** <e.g. vanilla TS, React 19, SolidJS 1.9, Astro 5>
 > **Series:** <Series name> — Part <N> of <M> · Previous: [`<YYYY-MM-DD>`](../<YYYY-MM-DD>/README.md)   ← only for series parts; omit otherwise
 
 #### **Overview**
@@ -73,9 +97,23 @@ In `focused` mode, every challenge must pass all of these checks:
 
 ---
 
+### **Why <framework>?**   ← surprise post-2018 framework only; omit otherwise
+<1–2 sentences on what's distinctive about it, plus a link to its official docs>
+
+---
+
+### **Starter**   ← inside-an-app, debug and real-time formats only; omit otherwise
+<the short starter app, buggy snippet or mock server, in fenced code blocks>
+
+---
+
 ### **Detailed Requirements**
-<3–5 bulleted requirements; strict TypeScript signatures (no `any`);
-expected inputs/outputs; any stubs or given types>
+<3–5 bulleted requirements; strict TypeScript signatures (no `any`) where there is
+an API; expected inputs/outputs; any stubs or given types>
+
+### **Acceptance Criteria**   ← UI formats; omit for library challenges
+<3–5 checks verifiable in the browser or with Playwright: what to do,
+and what must be visible, focused or announced>
 
 ---
 
@@ -93,8 +131,8 @@ expected inputs/outputs; any stubs or given types>
 ---
 
 ### **Interactive Next Steps**
-- **(A)** Ask for a comprehensive Vitest suite or starter code.
-- **(B)** Paste your solution for a review of type accuracy, edge cases and performance.
+- **(A)** Ask for a Vitest or Playwright suite, or a starter project.
+- **(B)** Paste your solution for a review of correctness, edge cases, accessibility and performance.
 ```
 
 ### `complex` mode

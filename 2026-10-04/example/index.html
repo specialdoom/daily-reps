@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Island Hydration Demo</title>
+    <style>
+      :root { font-family: system-ui, sans-serif; color: #1d2433; background: #f6f7f9; }
+      body { margin: 0; padding: 16px 16px 220px; max-width: 760px; margin-inline: auto; }
+      [data-island] { position: relative; background: #fff; border: 2px dashed #b6bcc8; border-radius: 10px; padding: 16px; margin: 16px 0; transition: border-color .3s; }
+      [data-island]::before { content: attr(data-island) " · " attr(data-hydrate) " · " attr(data-state); position: absolute; top: -10px; left: 12px; background: #f6f7f9; padding: 0 6px; font: 12px ui-monospace, monospace; color: #6b7385; }
+      [data-state="hydrated"] { border-style: solid; border-color: #2f9e66; }
+      [data-state="hydrated"]::before { color: #2f9e66; }
+      button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #b6bcc8; background: #fff; cursor: pointer; }
+      button.liked { background: #ffe3ea; border-color: #e0567a; }
+      .spacer { height: 140vh; display: grid; place-items: center; color: #6b7385; }
+      .banner { background: #fff6dd; border: 1px solid #e7c96b; border-radius: 10px; padding: 12px 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+      [data-island="chat"] { position: fixed; right: 16px; bottom: 16px; margin: 0; z-index: 2; }
+      #log { position: fixed; left: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: 170px; overflow: auto; margin: 0; padding: 10px 10px 10px 28px; background: #1d2433; color: #d7dce6; font: 12px/1.5 ui-monospace, monospace; border-radius: 10px; z-index: 1; }
+    </style>
+  </head>
+  <body>
+    <!-- Everything below is "server-rendered" HTML: visible immediately, inert until hydrated. -->
+
+    <div data-island="search" data-hydrate="load">
+      <input placeholder="Filter products…" />
+      <ul><li>Mechanical keyboard</li><li>USB-C hub</li><li>Monitor arm</li><li>Desk mat</li></ul>
+    </div>
+
+    <h1>Mechanical keyboard</h1>
+    <p>Hot-swappable switches, aluminium case, and keycaps that won't shine after a month.</p>
+
+    <div data-island="cart" data-hydrate="interaction">
+      <button>Add to cart</button> In cart: <output>0</output>
+    </div>
+
+    <div class="banner">
+      Not interested in recommendations?
+      <button id="dismiss-recs">Dismiss them</button>
+    </div>
+
+    <div class="spacer">↓ scroll down: the islands below hydrate as they approach the viewport ↓</div>
+
+    <div data-island="reviews" data-hydrate="visible:200px">
+      <h2>Reviews</h2>
+      <p>★★★★★ "Best keyboard I've owned."</p>
+      <div class="more" hidden><p>★★★★☆ "Loud, but great."</p><p>★★★★★ "Worth it."</p></div>
+      <button>Show more reviews</button>
+    </div>
+
+    <div data-island="recommendations" data-hydrate="visible, interaction">
+      <h2>You might also like</h2>
+      <button>♥ Wrist rest</button> <button>♥ Switch tester</button> <button>♥ Keycap puller</button>
+    </div>
+
+    <div data-island="chat" data-hydrate="idle:2000">
+      <button>💬 Chat</button>
+      <div class="chat-panel" hidden><p>Hi! How can we help?</p></div>
+    </div>
+
+    <ol id="log"></ol>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

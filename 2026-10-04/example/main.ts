@@ -1,5 +1,5 @@
-import { scheduleHydration } from "../island-hydration";
-import { domEnv } from "./dom-env";
+import { scheduleHydration } from "../island-hydration.js";
+import { domEnv } from "./dom-env.js";
 
 type Strategy = Exclude<Parameters<typeof scheduleHydration>[1], readonly unknown[]>;
 type Cancel = ReturnType<typeof scheduleHydration>;

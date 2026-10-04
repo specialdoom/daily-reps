@@ -1,4 +1,4 @@
-import type { scheduleHydration } from "../island-hydration";
+import type { scheduleHydration } from "../island-hydration.js";
 
 export type Env = Parameters<typeof scheduleHydration>[2];
 

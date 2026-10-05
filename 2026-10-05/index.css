@@ -1,0 +1,112 @@
+/* Enough spacing that the list scrolls, so a row can sit at the bottom edge. */
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rows > li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+/**
+ * Fallback: without anchor positioning (Firefox, Safari < 26) the menu keeps the
+ * UA popover styles, i.e. centred in the viewport and in the top layer. It still
+ * opens, closes and light-dismisses; only the tethering is lost. So everything that
+ * ties the menu to its button lives in this block.
+ */
+@supports (anchor-name: --a) {
+  li {
+    /**
+     * Every row's button is named --my-anchor. Without a scope, each menu's
+     * position-anchor would resolve to the last --my-anchor in the document, so all
+     * 22 menus would sit under row 22. anchor-scope limits the name to this li's
+     * subtree, so each menu finds the button in its own row.
+     */
+    anchor-scope: --my-anchor;
+  }
+
+  .actions-btn {
+    anchor-name: --my-anchor;
+  }
+
+  .menu {
+    /* position: fixed (the popover default) is kept on purpose: the fallbacks are
+       tried against the viewport, so the menu flips when it would be cut off by the
+       screen edge. With position: absolute they'd be tried against the document. */
+    position-anchor: --my-anchor;
+    /* The UA gives [popover] inset: 0 and margin: auto, which centres the menu in
+       the whole area below the button instead of placing it against the button. */
+    inset: auto;
+    margin: 0;
+    /* A margin rather than top, so the 8px gap mirrors when the menu flips. */
+    margin-block: 8px;
+    position-area: bottom span-right;
+    /* Tried in order, only when the default overflows the viewport. Once a
+       fallback wins, Chromium keeps it while it still fits (the spec's "last
+       successful position option"), so the menu flips back only when there's no
+       longer room above, not as soon as there's room below again. */
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+  }
+}
+
+.menu {
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+
+  /* Closed state, so the exit transitions too. */
+  opacity: 0;
+  translate: 0 -4px;
+  transition:
+    opacity 0.15s,
+    translate 0.15s,
+    display 0.15s allow-discrete,
+    overlay 0.15s allow-discrete;
+}
+
+.menu:popover-open {
+  display: flex;
+  opacity: 1;
+  translate: 0;
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+.menu button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  text-align: start;
+}
+
+.menu button:hover,
+.menu button:focus-visible {
+  background: #eee;
+}
+
+/* Fade only: nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+  .menu:popover-open {
+    translate: none;
+
+    @starting-style {
+      translate: none;
+    }
+  }
+}

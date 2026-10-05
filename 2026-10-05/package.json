@@ -1,0 +1,14 @@
+{
+  "name": "daily-rep-2026-10-05",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontend daily challenge — 5 Oct 2026",
+  "scripts": {
+    "test": "playwright test",
+    "test:before-review": "PAGE=before-review/index.html playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

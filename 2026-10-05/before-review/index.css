@@ -1,0 +1,46 @@
+li {
+  /** to limit the scope in which a positioned element can be associated with anchor elements to a particular subtree. */
+  anchor-scope: --my-anchor;
+}
+
+.actions-btn {
+  anchor-name: --my-anchor;
+}
+
+.menu {
+  position: absolute;
+  top: 8px;
+  position-anchor: --my-anchor;
+  position-area: bottom center;
+  position-try-order: most-height;
+  position-try-fallbacks: top, bottom;
+
+  opacity: 1;
+  transform: scaleX(1);
+  transition:
+    opacity 0.5s,
+    transform 0.5s;
+  transition-behavior: allow-discrete;
+
+  @starting-style {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    opacity: 1;
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+}
+
+/**
+ CHECK
+ .rows {
+  overflow: hidden;
+}
+*/

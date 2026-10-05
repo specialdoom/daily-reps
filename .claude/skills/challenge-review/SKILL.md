@@ -54,6 +54,13 @@ Make the folder runnable on its own: `package.json` with `test` (and `check`/`bu
 | HTML/CSS only | A Playwright spec (`<name>.spec.ts`) that loads the page and asserts behaviour: visibility, focus, Escape and light dismiss, computed positions, overflow and flipping at small viewports, reduced motion, and so on. Use `@playwright/test` with `executablePath: '/opt/pw-browsers/chromium'`. Never run `playwright install`. |
 | Real-time | Vitest with a mock socket or `BroadcastChannel`, and fake timers for reconnect and backoff |
 
+**Browser-testing gotchas** (Chromium with Playwright):
+- Under `file://`, a stylesheet's `cssRules` throws a SecurityError. Read the CSS file from disk to assert on its source.
+- Playwright's `getByRole(..., { expanded })` only reads `aria-expanded`. To check state exposed natively (e.g. by `popovertarget`), read Chromium's accessibility tree over CDP (`Accessibility.getFullAXTree`).
+- Wait for `el.getAnimations()` to finish before measuring with `boundingBox()`, because transforms skew the boxes.
+- Anchor positioning remembers the last successful `position-try` fallback, so a flipped popover doesn't flip back just because space reappears.
+- An open popover can cover other triggers, so pick targets it doesn't overlap.
+
 **Prove the tests matter.** Run the suite against the `before-review/` version, e.g. by temporarily pointing the import or page path at it. Confirm that the confirmed findings fail there and pass on the reviewed version, and record which ones in the PR.
 
 ## 6. Verify

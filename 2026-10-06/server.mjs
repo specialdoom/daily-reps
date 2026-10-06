@@ -21,14 +21,13 @@ http
       "cache-control": "no-cache",
       "access-control-allow-origin": "*",
     });
-    const last = Number(req.headers["last-event-id"] ?? 0);
+    const url = new URL(req.url, "http://localhost:3001");
+    const last = Number(url.searchParams.get("lastEventId") ?? 0);
     let sent = last;
     const timer = setInterval(() => {
       for (const e of history) {
         if (e.id > sent) {
-          const toWrite = `id: ${e.id}\ndata: ${e.data}\n\n`;
-          console.log(toWrite);
-          res.write(toWrite);
+          res.write(`id: ${e.id}\ndata: ${e.data}\n\n`);
           sent = e.id;
         }
       }

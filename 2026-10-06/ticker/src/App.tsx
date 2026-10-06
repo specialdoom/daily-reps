@@ -1,10 +1,10 @@
-import { createSignal } from "solid-js";
+import { createSignal, For, onCleanup } from "solid-js";
 import "./App.css";
 import { createTicker } from "./ticker";
 
 function App() {
   const [count, setCount] = createSignal(0);
-  const ticker = createTicker({ url: "http://localhost:3001" });
+  const { ticks, status } = createTicker({ url: "http://localhost:3001" });
 
   return (
     <>
@@ -24,7 +24,16 @@ function App() {
         </button>
       </section>
 
-      <div class="ticks"></div>
+      <div class="ticks">
+        <span class="counter">{status()}</span>
+        <For each={ticks()}>
+          {(item) => (
+            <div>
+              {item.id} | {item.symbol}: {item.price}
+            </div>
+          )}
+        </For>
+      </div>
     </>
   );
 }

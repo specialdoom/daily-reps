@@ -175,7 +175,9 @@ Only create the README. Don't add a solution, tests or starter code; the owner a
 
 ## 5. Commit and push
 
-- Commit only the new `YYYY-MM-DD/README.md`. Use the message `add YYYY-MM-DD daily challenge`. Append ` (<series> part N/M)` for a series part, or ` (complex)` in `complex` mode.
+- Commit only the new `YYYY-MM-DD/README.md`. The message format is `YYYY-MM-DD: <message>`, where the date is the challenge folder's date and `<message>` is a short lowercase summary, e.g. `2026-10-07: add daily challenge`.
+  - For a series part, append ` (<series> part N/M)`, e.g. `2026-10-07: add daily challenge (scheduler part 2/4)`.
+  - In `complex` mode, append ` (complex)`.
 - Push **directly to `main`**. Do not create or push other branches.
 - If `main` moved, pull with rebase and push again. If the push fails for authentication or permission reasons, report that and stop.
 - If you're running interactively, show the full challenge in chat as well, and give the date and commit SHA.

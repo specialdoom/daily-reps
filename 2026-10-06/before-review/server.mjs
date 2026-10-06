@@ -21,12 +21,8 @@ http
       "cache-control": "no-cache",
       "access-control-allow-origin": "*",
     });
-    // Last-Event-ID is what browsers send on their own retries; a fresh
-    // EventSource can't set headers, so the client also passes ?lastEventId.
     const url = new URL(req.url, "http://localhost:3001");
-    const last = Number(
-      req.headers["last-event-id"] ?? url.searchParams.get("lastEventId") ?? 0,
-    );
+    const last = Number(url.searchParams.get("lastEventId") ?? 0);
     let sent = last;
     const timer = setInterval(() => {
       for (const e of history) {

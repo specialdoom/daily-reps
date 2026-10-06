@@ -10,19 +10,33 @@ export interface TickerOptions {
   maxDelayMs?: number; // default 8000
   createSource?: (url: string) => EventSource; // injectable for tests
   setTimer?: (fn: () => void, ms: number) => number; // injectable for tests
+  // Additions to the README's interface, so that everything time-based can be
+  // injected: cancelling a timer from setTimer, and scheduling the batched write.
+  clearTimer?: (id: number) => void;
+  scheduleFlush?: (fn: () => void) => void;
 }
 
 export function createTicker(opts: TickerOptions) {
   const finalOptions = {
-    limit: opts?.limit ?? 20,
-    baseDelayMs: opts?.baseDelayMs ?? 500,
-    maxDelayMs: opts?.maxDelayMs ?? 8000,
-    setTimer: opts?.setTimer,
-    createSource: opts?.createSource ?? ((url: string) => new EventSource(url)),
+    limit: opts.limit ?? 20,
+    baseDelayMs: opts.baseDelayMs ?? 500,
+    maxDelayMs: opts.maxDelayMs ?? 8000,
+    createSource: opts.createSource ?? ((url: string) => new EventSource(url)),
+    // An injected setTimer comes with its own clearTimer (or none); clearTimeout
+    // only understands ids from setTimeout.
+    setTimer: opts.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms)),
+    clearTimer: opts.setTimer ? opts.clearTimer : clearTimeout,
+    // requestAnimationFrame doesn't exist during SSR or in Node.
+    scheduleFlush:
+      opts.scheduleFlush ??
+      ((fn: () => void) =>
+        typeof requestAnimationFrame === "function"
+          ? requestAnimationFrame(fn)
+          : setTimeout(fn, 16)),
     url: opts.url,
   };
-  let [ticks, setTicks] = createSignal<Tick[]>([]);
-  let [status, setStatus] = createSignal<Status>("connecting");
+  const [ticks, setTicks] = createSignal<Tick[]>([]);
+  const [status, setStatus] = createSignal<Status>("connecting");
   let attempt = 0;
   let reconnectingTimer: number | undefined;
   let maxEventIdSeen = 0;
@@ -34,58 +48,64 @@ export function createTicker(opts: TickerOptions) {
   function flush() {
     isFlushScheduled = false;
     if (isClosed) return;
-    const batch = [...pending];
+    const batch = pending;
     pending = [];
     setTicks((v) => [...batch, ...v].slice(0, finalOptions.limit));
   }
 
-  let eventSource = newEventSource();
+  let eventSource = newEventSource(finalOptions.url);
 
-  function newEventSource(url = finalOptions.url) {
-    const eventSource = finalOptions.createSource(url);
+  function newEventSource(url: string) {
+    const source = finalOptions.createSource(url);
+    // Events can still be queued on a source after it was closed or replaced.
+    const isCurrent = () => !isClosed && source === eventSource;
 
-    eventSource.addEventListener("message", (ev) => {
-      if (isClosed) return;
+    source.addEventListener("message", (ev) => {
+      if (!isCurrent() || !ev.data) return;
 
-      if (ev.data) {
-        const numberId = Number(ev.lastEventId);
-        if (numberId <= maxEventIdSeen) return;
+      const numberId = Number(ev.lastEventId);
+      // A non-numeric id would make maxEventIdSeen NaN and turn dedup off.
+      if (!Number.isFinite(numberId) || numberId <= maxEventIdSeen) return;
 
-        maxEventIdSeen = Math.max(maxEventIdSeen, numberId);
+      let payload: Omit<Tick, "id">;
+      try {
+        payload = JSON.parse(ev.data);
+      } catch {
+        // Not marked as seen, so a valid replay of this id is still accepted.
+        return;
+      }
+      maxEventIdSeen = numberId;
 
-        pending = [
-          {
-            id: numberId,
-            ...JSON.parse(ev.data),
-          },
-          ...pending,
-        ];
+      // id last, so a payload field can't replace the event id.
+      // Capped here too: rAF doesn't run in background tabs, so a hidden tab
+      // would otherwise buffer every event until it becomes visible again.
+      pending = [{ ...payload, id: numberId }, ...pending].slice(
+        0,
+        finalOptions.limit,
+      );
 
-        if (!isFlushScheduled) {
-          isFlushScheduled = true;
-          requestAnimationFrame(flush);
-        }
+      if (!isFlushScheduled) {
+        isFlushScheduled = true;
+        finalOptions.scheduleFlush(flush);
       }
     });
 
-    eventSource.addEventListener("error", (error) => {
-      if (isClosed) return;
+    source.addEventListener("error", () => {
+      if (!isCurrent()) return;
 
-      eventSource.close();
+      source.close();
 
       reconnect();
     });
 
-    eventSource.addEventListener("open", () => {
+    source.addEventListener("open", () => {
+      if (!isCurrent()) return;
+
       attempt = 0;
       setStatus("open");
     });
 
-    return eventSource;
-  }
-
-  function connect() {
-    setStatus("connecting");
+    return source;
   }
 
   function reconnect() {
@@ -99,38 +119,44 @@ export function createTicker(opts: TickerOptions) {
       finalOptions.baseDelayMs * Math.pow(2, attempt),
     );
 
-    reconnectingTimer =
-      finalOptions?.setTimer?.(timerCallback, ms) ??
-      setTimeout(timerCallback, ms);
+    reconnectingTimer = finalOptions.setTimer(timerCallback, ms);
   }
 
   function timerCallback() {
+    // An injected timer may not have been cancellable.
     if (isClosed) return;
 
     isReconnecting = false;
-    eventSource = newEventSource(
-      `${finalOptions.url}?lastEventId=${maxEventIdSeen}`,
-    );
+    reconnectingTimer = undefined;
+    eventSource = newEventSource(resumeUrl());
     attempt++;
+  }
+
+  /**
+   * A new EventSource can't set the Last-Event-ID header, so the last seen id
+   * goes in the query instead. The server reads the header when present
+   * (browser auto-retry, other clients) and falls back to ?lastEventId.
+   */
+  function resumeUrl() {
+    const url = new URL(finalOptions.url, globalThis.location?.href);
+    url.searchParams.set("lastEventId", String(maxEventIdSeen));
+    return url.toString();
   }
 
   function close() {
     isClosed = true;
     eventSource.close();
-    clearTimeout(reconnectingTimer);
+    if (reconnectingTimer !== undefined) {
+      finalOptions.clearTimer?.(reconnectingTimer);
+      reconnectingTimer = undefined;
+    }
   }
-
-  connect();
 
   if (getOwner()) onCleanup(close);
 
   return {
-    ticks() {
-      return ticks();
-    },
-    status() {
-      return status();
-    },
+    ticks,
+    status,
     close,
   };
 }

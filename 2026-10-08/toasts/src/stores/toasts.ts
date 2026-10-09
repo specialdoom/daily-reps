@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore, storeToRefs } from 'pinia'
+import { readonly, ref, type Ref } from 'vue'
 import { useLogger } from './logger'
 
 export type ToastKind = 'info' | 'success' | 'error'
@@ -10,116 +10,140 @@ export interface ToastInput {
   duration?: number // ms, default 5000; 0 = sticky
 }
 
+export type PauseReason = 'hover' | 'focus'
+
 type Timer = {
-  id: number
-  duration: number
-  timestamp: number
+  handle?: ReturnType<typeof setTimeout>
+  remaining: number
+  startedAt: number
+  // A toast can be hovered and focused at the same time; it resumes only when both are gone.
+  pausedBy: Set<PauseReason>
 }
 
 export interface Toast extends Required<ToastInput> {
   id: number
 }
 
-export const useToasts = defineStore('toasts', () => {
+const DEFAULT_DURATION = 5000
+export const MAX_VISIBLE = 3
+
+export const useToastStore = defineStore('toasts', () => {
   const logger = useLogger()
   let id = 0
   const timers = new Map<number, Timer>()
   const toasts = ref<Toast[]>([])
+  // Queued toasts are kept out of the DOM, so the live regions don't announce them yet.
+  let queue: Toast[] = []
 
-  function createNewToast(input: ToastInput) {
+  function createNewToast(input: ToastInput): Omit<Toast, 'id'> {
+    const duration = input.duration ?? DEFAULT_DURATION
     return {
-      id: id++,
-      kind: input?.kind ?? 'info',
-      duration: input?.duration ?? 5000,
+      kind: input.kind ?? 'info',
+      duration: Number.isFinite(duration) && duration >= 0 ? duration : DEFAULT_DURATION,
       message: input.message,
     }
   }
 
-  function getExistingToasts(toast: Toast) {
-    const existingIndexes = []
-
-    for (let i = 0; i < toasts.value.length; i++) {
-      const t = toasts.value[i] as Toast
-      if (t.message === toast.message && t.kind === toast.kind) {
-        existingIndexes.push(i)
-      }
-    }
-
-    return existingIndexes
+  function findExisting(input: Omit<Toast, 'id'>) {
+    const isSame = (t: Toast) => t.message === input.message && t.kind === input.kind
+    return toasts.value.find(isSame) ?? queue.find(isSame)
   }
 
-  function push(input: ToastInput) {
-    const toast = createNewToast(input)
-    const existingToasts = getExistingToasts(toast)
+  function push(input: ToastInput): number {
+    const newToast = createNewToast(input)
+    const existing = findExisting(newToast)
 
-    if (existingToasts.length > 0) {
-      for (const index of existingToasts) {
-        const toastAtIndex = toasts.value[index] as Toast
-        toasts.value[index] = { ...toastAtIndex, duration: toast.duration }
-        startTimer(toast.duration, toastAtIndex.id)
-        logger.log(`Updating duration for the toast with id: ${id}.`)
+    if (existing) {
+      existing.duration = newToast.duration
+      if (toasts.value.includes(existing)) {
+        startTimer(existing.duration, existing.id)
+        logger.log(`Restarting timer for the toast with id: ${existing.id}.`)
+      } else {
+        // Its timer starts once it becomes visible.
+        logger.log(`Toast with id ${existing.id} is already queued.`)
       }
-    } else {
-      toasts.value = [...toasts.value, toast]
-      logger.log(`Adding new toast with id: ${id}.`)
+      return existing.id
     }
 
-    if (toast.duration !== 0) {
-      logger.log(`Starting timer for toast with id ${id}, duration ${toast.duration}ms.`)
-      startTimer(toast.duration, toast.id)
+    const toast = { id: id++, ...newToast }
+    if (toasts.value.length < MAX_VISIBLE) {
+      show(toast)
+    } else {
+      queue.push(toast)
+      logger.log(`Queueing toast with id: ${toast.id}.`)
     }
+    return toast.id
+  }
+
+  function show(toast: Toast) {
+    toasts.value = [...toasts.value, toast]
+    logger.log(`Adding new toast with id: ${toast.id}.`)
+    startTimer(toast.duration, toast.id)
+  }
+
+  function clearTimer(id: number) {
+    clearTimeout(timers.get(id)?.handle)
+    timers.delete(id)
+  }
+
+  function schedule(id: number, timer: Timer) {
+    timer.startedAt = Date.now()
+    timer.handle = setTimeout(() => {
+      logger.log(`Duration passed for toast with id ${id}. Toast closed.`)
+      dismiss(id)
+    }, timer.remaining)
   }
 
   function startTimer(duration: number, id: number) {
-    if (timers.get(id)) {
-      clearTimeout(timers.get(id)?.id)
+    const pausedBy = timers.get(id)?.pausedBy ?? new Set<PauseReason>()
+    clearTimer(id)
+    if (duration === 0) return
+
+    const timer: Timer = { remaining: duration, startedAt: Date.now(), pausedBy }
+    timers.set(id, timer)
+    // A duplicate pushed while the toast is hovered/focused restarts the time but stays paused.
+    if (pausedBy.size === 0) {
+      schedule(id, timer)
+      logger.log(`Starting timer for toast with id ${id}, duration ${duration}ms.`)
     }
-    const timerId = setTimeout(() => {
-      logger.log(`Duration passed for toast with id ${id}. Toast closed.`)
-      dismiss(id)
-    }, duration)
-
-    timers.set(id, {
-      id: timerId,
-      duration,
-      timestamp: Date.now(),
-    })
   }
 
-  function stopTimer(id: number) {
+  function stopTimer(id: number, reason: PauseReason) {
     const timer = timers.get(id)
     if (!timer) return
-    clearTimeout(timer?.id)
-    const remanining = Date.now() - timer?.timestamp
-    logger.log(`Toast with id ${id} focused. Timer stopped. Remaining: ${remanining}ms.`)
-
-    timers.set(id, {
-      ...timer,
-      duration: remanining,
-    })
+    if (timer.pausedBy.size === 0) {
+      clearTimeout(timer.handle)
+      timer.handle = undefined
+      timer.remaining = Math.max(0, timer.remaining - (Date.now() - timer.startedAt))
+      logger.log(`Toast with id ${id} paused. Remaining: ${timer.remaining}ms.`)
+    }
+    timer.pausedBy.add(reason)
   }
 
-  function continueTimer(id: number) {
+  function continueTimer(id: number, reason: PauseReason) {
     const timer = timers.get(id)
-    if (!timer) return
+    if (!timer || !timer.pausedBy.delete(reason) || timer.pausedBy.size > 0) return
 
-    const timerId = setTimeout(() => {
-      logger.log(`Duration passed for toast with id ${id}. Toast closed.`)
-      dismiss(id)
-    }, timer.duration)
-
-    timers.set(id, { ...timer, id: timerId })
-
-    logger.log(`Continue timer for toast with id ${id}. Duration: ${timer.duration}ms.`)
+    schedule(id, timer)
+    logger.log(`Continue timer for toast with id ${id}. Duration: ${timer.remaining}ms.`)
   }
 
   function dismiss(id: number) {
+    clearTimer(id)
+    queue = queue.filter((t) => t.id !== id)
+    const before = toasts.value.length
     toasts.value = toasts.value.filter((t) => t.id !== id)
-    if (timers.get(id) !== undefined) {
-      logger.log(`Toast with id ${id} dissmissed.`)
-      clearTimeout(timers.get(id)?.id)
-      timers.delete(id)
-    }
+    if (toasts.value.length === before) return
+    logger.log(`Toast with id ${id} dismissed.`)
+
+    const next = queue.shift()
+    if (next) show(next)
+  }
+
+  function clear() {
+    for (const id of timers.keys()) clearTimer(id)
+    queue = []
+    toasts.value = []
   }
 
   return {
@@ -128,5 +152,17 @@ export const useToasts = defineStore('toasts', () => {
     dismiss,
     stopTimer,
     continueTimer,
+    clear,
   }
 })
+
+/** The public API from the challenge: read-only toasts, `push` and `dismiss`. */
+export function useToasts(): {
+  toasts: Readonly<Ref<readonly Toast[]>>
+  push(input: ToastInput): number
+  dismiss(id: number): void
+} {
+  const store = useToastStore()
+  const { toasts } = storeToRefs(store)
+  return { toasts: readonly(toasts), push: store.push, dismiss: store.dismiss }
+}

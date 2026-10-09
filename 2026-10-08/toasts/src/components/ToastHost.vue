@@ -1,35 +1,83 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useToasts } from '../stores/toasts.ts'
+import { computed, onUnmounted } from 'vue';
+import { useToastStore } from '../stores/toasts.ts'
 
-const store = useToasts()
+const store = useToastStore()
 const errorToasts = computed(
   () => store.toasts.filter(t => t.kind === "error"));
 const remainingToasts = computed(() => store.toasts.filter(t => t.kind !== "error"));
 
+// Where focus came from when it entered each toast, so Escape can send it back.
+const returnFocusTo = new Map<number, HTMLElement>();
+
+function focusin(event: FocusEvent, id: number) {
+  const li = event.currentTarget as HTMLElement;
+  const from = event.relatedTarget;
+  if (from instanceof HTMLElement && !li.contains(from)) {
+    returnFocusTo.set(id, from);
+  }
+  store.stopTimer(id, "focus");
+}
+
+function focusout(event: FocusEvent, id: number) {
+  const li = event.currentTarget as HTMLElement;
+  // Moving between elements inside the same toast keeps it paused.
+  if (event.relatedTarget instanceof Node && li.contains(event.relatedTarget)) return;
+  store.continueTimer(id, "focus");
+}
+
+function dismiss(id: number) {
+  returnFocusTo.delete(id);
+  store.dismiss(id);
+}
+
 function escape(event: KeyboardEvent, id: number) {
-  if (event.key === "Escape") {
-    store.dismiss(id);
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  event.stopPropagation();
+  const target = returnFocusTo.get(id);
+  dismiss(id);
+  if (target?.isConnected) {
+    target.focus();
+  } else {
+    (document.activeElement as HTMLElement | null)?.blur();
   }
 }
+
+onUnmounted(() => {
+  // The store outlives the host; don't let its timers fire into an unmounted UI.
+  store.clear();
+  returnFocusTo.clear();
+});
 </script>
 
 <template>
   <div class="container">
-    <ul class="region" role="status" aria-live="polite" aria-atomic="false">
-      <li v-for="toast in remainingToasts" :key="toast.id" class="toast"
-        :class="`toast--${toast.kind} ${toast.duration === 0 ? 'sticky' : ''}`" @mouseenter="store.stopTimer(toast.id)"
-        @mouseleave="store.continueTimer(toast.id)">{{
-          toast.message }}<button @click="store.dismiss(toast.id)" :aria-label="`Dismiss: ${toast.message}`"
-          @keydown="escape($event, toast.id)">x</button>
-      </li>
-    </ul>
-    <ul class="region" role="alert" aria-live="assertive">
-      <li v-for="toast in errorToasts" :key="toast.id" class="toast"
-        :class="`toast--${toast.kind} ${toast.duration === 0 ? 'sticky' : ''}`" class.sticky="">{{
-          toast.message }}<button @click="store.dismiss(toast.id)" :aria-label="`Dismiss: ${toast.message}`">x</button>
-      </li>
-    </ul>
+    <div class="region" role="status" aria-live="polite" aria-atomic="false">
+      <ul class="list">
+        <li v-for="toast in remainingToasts" :key="toast.id" class="toast"
+          :class="[`toast--${toast.kind}`, { sticky: toast.duration === 0 }]"
+          @mouseenter="store.stopTimer(toast.id, 'hover')" @mouseleave="store.continueTimer(toast.id, 'hover')"
+          @focusin="focusin($event, toast.id)" @focusout="focusout($event, toast.id)"
+          @keydown="escape($event, toast.id)">{{
+            toast.message }}<button type="button" @click="dismiss(toast.id)"
+            :aria-label="`Dismiss: ${toast.message}`">x</button>
+        </li>
+      </ul>
+    </div>
+    <!-- role="alert" implies aria-atomic="true", which would re-read every visible error on each new one. -->
+    <div class="region" role="alert" aria-live="assertive" aria-atomic="false">
+      <ul class="list">
+        <li v-for="toast in errorToasts" :key="toast.id" class="toast"
+          :class="[`toast--${toast.kind}`, { sticky: toast.duration === 0 }]"
+          @mouseenter="store.stopTimer(toast.id, 'hover')" @mouseleave="store.continueTimer(toast.id, 'hover')"
+          @focusin="focusin($event, toast.id)" @focusout="focusout($event, toast.id)"
+          @keydown="escape($event, toast.id)">{{
+            toast.message }}<button type="button" @click="dismiss(toast.id)"
+            :aria-label="`Dismiss: ${toast.message}`">x</button>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -52,7 +100,7 @@ function escape(event: KeyboardEvent, id: number) {
   pointer-events: none;
 }
 
-.region {
+.list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -63,11 +111,11 @@ function escape(event: KeyboardEvent, id: number) {
 
 /*
  * Never hide an empty region with display:none / visibility:hidden: that drops it
- * from the accessibility tree and breaks the first announcement. An empty <ul>
+ * from the accessibility tree and breaks the first announcement. An empty region
  * with no padding/border already takes no space; only add a gap between two
  * regions when both have toasts.
  */
-.region:not(:empty)~.region:not(:empty) {
+.region:has(li)~.region:has(li) {
   margin-top: 1rem;
 }
 

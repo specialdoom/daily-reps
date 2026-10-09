@@ -25,7 +25,7 @@ function addNewToast() {
         <span class="console__dots" aria-hidden="true"><i @click="logger.clear"></i><i></i><i></i></span>
       </header>
       <ol class="console__log">
-        <li class="console__line" v-for="log in logger.logs" :key="log.timestamp">
+        <li class="console__line" v-for="(log, i) in logger.logs" :key="i">
           <time class="console__time">{{ new Date(log.timestamp).toLocaleString("en-UK", {
             hour: '2-digit', minute:
               '2-digit', hour12: false

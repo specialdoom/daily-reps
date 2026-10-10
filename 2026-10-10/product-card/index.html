@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>product-card</title>
+    <link rel="stylesheet" href="./src/index.css" />
+    <script type="module" src="/src/product-card.ts"></script>
+  </head>
+  <body>
+    <div
+      style="
+        resize: horizontal;
+        overflow: auto;
+        width: 700px;
+        border: 1px dashed;
+      "
+    >
+      <product-card
+        name="Trail Shoe"
+        price="$120"
+        image="/shoe.jpg"
+        description="Light, grippy, waterproof."
+      >
+        <button slot="actions">Add to cart</button>
+      </product-card>
+    </div>
+
+    <div
+      style="
+        resize: horizontal;
+        overflow: auto;
+        width: 250px;
+        border: 1px dashed;
+      "
+    >
+      <product-card
+        name="Trail Shoe"
+        price="$120"
+        image="/shoe.jpg"
+        description="Light, grippy, waterproof."
+      >
+        <button slot="actions">Add to cart</button>
+      </product-card>
+    </div>
+  </body>
+</html>
+

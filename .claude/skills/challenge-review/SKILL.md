@@ -1,6 +1,6 @@
 ---
 name: challenge-review
-description: Reviews the owner's solution to a dated challenge in this repo, without prior context, against only that challenge's README.md. Keeps the original in `before-review/`, writes the reviewed solution with tests next to the README, and opens a PR into main. Use when the user says they pushed or finished a solution and asks for a review, e.g. "review my solution for 2026-10-05", "do a code review without context", or "review today's challenge". Do NOT use for generating challenges (daily-challenge) or for guiding the owner while they're still solving (socratic-mentor).
+description: Reviews the owner's solution to a dated challenge in this repo, without prior context, against only that challenge's README.md. Keeps the original in `before-review/`, writes the reviewed solution with tests next to the README, and commits it directly on main. Requires a `YYYY-MM-DD: solution` commit for that day (checked by a commit lint) before it reviews anything. Use when the user says they pushed or finished a solution and asks for a review, e.g. "review my solution for 2026-10-05", "do a code review without context", or "review today's challenge". Do NOT use for generating challenges (daily-challenge) or for guiding the owner while they're still solving (socratic-mentor).
 ---
 
 # Challenge Review
@@ -9,8 +9,15 @@ The owner solves a daily challenge in `YYYY-MM-DD/` and asks for a review. The r
 
 ## 1. Locate the solution
 
-- Fetch first with `git fetch origin main`. Work from `origin/main`, not from a possibly stale local `main`.
+- Start from `git checkout main && git pull origin main`, so you work on an up-to-date `main`, not a stale one.
 - Target folder: the date the user named, or otherwise the most recent folder whose latest commit is the owner's solution.
+- **Commit lint: run it before anything else.** A review only starts once the day's solution is committed on `main` with the exact subject `YYYY-MM-DD: solution`:
+
+  ```sh
+  sh .claude/skills/challenge-review/scripts/lint-solution-commit.sh YYYY-MM-DD
+  ```
+
+  If it fails (exit 1), **stop**: no review, no subagent, no moving files, no commits. Tell the user the solution commit is missing, show the commits the script listed for that date, and ask them to commit the solution as `YYYY-MM-DD: solution`. Near misses such as `part of solution` or `updated solution` don't count. Never create or reword that commit yourself.
 - **The original lives in `YYYY-MM-DD/before-review/`.**
   - If the owner already put it there (commits like "solution before review"), leave it untouched.
   - If the solution is in the folder root instead, move it into `before-review/` keeping the same file names, and commit that on its own as `YYYY-MM-DD: solution before review`.
@@ -19,7 +26,7 @@ The owner solves a daily challenge in `YYYY-MM-DD/` and asks for a review. The r
 
 ## 2. Branch
 
-Work on a separate branch, never directly on `main`: use the session's designated branch if there is one, otherwise `review/YYYY-MM-DD`. Create it from `origin/main`. If the branch already exists only as merged history, restart it from `origin/main`.
+Work **directly on `main`**. Once the commit lint has passed, the review is committed on top of the solution commit. Do not create a review branch and do not open a PR.
 
 ## 3. Independent review
 
@@ -33,7 +40,7 @@ Spawn **one subagent** (general-purpose, in the foreground). Its prompt must:
   - UI and HTML/CSS: drive Chromium with Playwright, using `executablePath: '/opt/pw-browsers/chromium'`, and take screenshots.
   - Forbid edits, commits and git commands in the repo.
 
-When it returns, **verify every finding yourself** before acting on it. Reproduce it in a test, a script or the browser. Drop or downgrade anything that doesn't reproduce, and say so in the PR.
+When it returns, **verify every finding yourself** before acting on it. Reproduce it in a test, a script or the browser. Drop or downgrade anything that doesn't reproduce, and say so in the report.
 
 ## 4. Write the reviewed solution
 
@@ -41,7 +48,7 @@ When it returns, **verify every finding yourself** before acting on it. Reproduc
 - Fix every confirmed blocking and should-fix finding. Apply nits when they're cheap and clearly right.
 - Keep the owner's structure, naming and style. This is their solution, improved, not a rewrite.
 - Add a comment only where a fix is non-obvious (a spec detail, a browser quirk, a race). Don't narrate.
-- Leave findings out when they need more than the README asks for, or when they're a matter of taste. List them as not changed in the PR, with the reason.
+- Leave findings out when they need more than the README asks for, or when they're a matter of taste. List them as not changed in the report, with the reason.
 
 ## 5. Tests and project setup
 
@@ -61,20 +68,22 @@ Make the folder runnable on its own: `package.json` with `test` (and `check`/`bu
 - Anchor positioning remembers the last successful `position-try` fallback, so a flipped popover doesn't flip back just because space reappears.
 - An open popover can cover other triggers, so pick targets it doesn't overlap.
 
-**Prove the tests matter.** Run the suite against the `before-review/` version, e.g. by temporarily pointing the import or page path at it. Confirm that the confirmed findings fail there and pass on the reviewed version, and record which ones in the PR.
+**Prove the tests matter.** Run the suite against the `before-review/` version, e.g. by temporarily pointing the import or page path at it. Confirm that the confirmed findings fail there and pass on the reviewed version, and record which ones in the report.
 
 ## 6. Verify
 
-Run everything the folder offers: type check, tests and build. For UI formats, also open the page in Chromium and take a screenshot. Fix anything red before committing. A failure that also happens on `main`, and that has nothing to do with this folder, gets mentioned in the PR, not fixed.
+Run everything the folder offers: type check, tests and build. For UI formats, also open the page in Chromium and take a screenshot. Fix anything red before committing. A failure that was already there before the review, and that has nothing to do with this folder, gets mentioned in the report, not fixed.
 
-## 7. Commit, push, PR
+## 7. Commit and push
 
-- Commit as `YYYY-MM-DD: review for solution`, with the session's attribution trailer if one is configured.
-- Push the branch with `git push -u origin <branch>`.
-- Open a PR into `main` titled `YYYY-MM-DD: review for <challenge title>`. If the repo has a PR template, follow it. Otherwise use these sections:
+- Commit on `main` as `YYYY-MM-DD: review for solution`, with the session's attribution trailer if one is configured. Stage only files inside `YYYY-MM-DD/`.
+- Since there is no PR, the commit body carries the short version of the review: a one-paragraph verdict, then one line per confirmed finding with its severity and status (fixed / not changed + why).
+- Push **directly to `main`**. Do not create or push other branches.
+- If `main` moved, pull with rebase and push again. If the push fails for authentication or permission reasons, report that and stop.
+- Report to the user in chat, with the commit SHA:
   - **Summary**: one paragraph on the verdict.
   - **Findings**: a table of severity, finding, failure scenario and status (fixed / not changed + why / didn't reproduce).
   - **README requirements**: met / partial / not met, before and after.
   - **Changes**: what changed, by file.
   - **Test plan**: commands run and their results, the tests that fail on `before-review/`, and screenshots or browser checks for UI.
-- Tell the user the PR link, the 2–4 most important findings in plain words, and anything you couldn't verify. Offer to watch the PR.
+  - Anything you couldn't verify.

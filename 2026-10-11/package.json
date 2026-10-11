@@ -1,9 +1,9 @@
 {
-  "name": "daily-rep-2026-10-02",
+  "name": "daily-rep-2026-10-11",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Frontend daily challenge — 2 Oct 2026",
+  "description": "Frontend daily challenge — 11 Oct 2026",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

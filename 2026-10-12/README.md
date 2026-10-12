@@ -8,6 +8,29 @@ A storefront's product page is rendered on the server and served with `Cache-Con
 
 ---
 
+### **What You'll Learn**
+
+**Core concept:** Cacheability is a property of the *whole response*. One per-user value (a cookie read, a name in the HTML) turns a shared CDN page into a private one. Server islands let you split the page into a cacheable shell plus a separately fetched personal fragment.
+
+**By the end you should be able to:**
+- Explain why reading `Astro.cookies` in a page makes `s-maxage` unsafe (cache poisoning: one user's name served to everyone).
+- Move per-user rendering into a `server:defer` component and give the shell a static fallback.
+- Set different `Cache-Control` headers for the shell and the island response.
+- Check cacheability from the outside: inspect response headers and compare two users' HTML.
+
+**Skills practised:** HTTP caching (`public` vs `private`, `s-maxage`, `Vary`) · SSR rendering boundaries · Astro server islands · verifying behaviour with `curl`.
+
+**Prerequisites:** basic HTTP headers, and what a CDN does with them. No Astro experience needed.
+
+**Where this shows up in practice:** e-commerce headers and carts, "Hi, Ana" banners, A/B-test variants. The same split exists as Next.js Partial Prerendering and as edge-side includes (ESI).
+
+**Self-check (answer after solving):**
+1. Why is `Vary: Cookie` usually a worse fix than an island?
+2. What does the user see if the island request fails, and is that acceptable?
+3. Which headers must the island's own response send?
+
+---
+
 ### **Why Astro?**
 Astro renders pages to HTML on the server and ships zero JavaScript by default. Its *server islands* (`server:defer`) let a single component render on its own request, after the shell has been delivered, so the shell can stay static while one region is dynamic. Docs: https://docs.astro.build/en/guides/server-islands/
 

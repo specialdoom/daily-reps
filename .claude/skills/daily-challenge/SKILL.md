@@ -97,6 +97,24 @@ In `focused` mode, every challenge must pass all of these checks:
 
 ---
 
+### **What You'll Learn**
+
+**Core concept:** <1–2 sentences: the single idea the challenge is built around; must match the Focus line>
+
+**By the end you should be able to:**
+- <3–4 concrete, checkable outcomes, each starting with a verb: explain, implement, measure, choose…; never "understand X">
+
+**Skills practised:** <short tags separated by " · ", e.g. HTTP caching · SSR boundaries · Astro server islands>
+
+**Prerequisites:** <what the owner is assumed to know already>
+
+**Where this shows up in practice:** <one line: real products/features, and the equivalent in other frameworks>
+
+**Self-check (answer after solving):**
+1. <2–3 questions that test the core concept, not trivia; good prompts for a /socratic-mentor session>
+
+---
+
 ### **Why <framework>?**   ← surprise post-2018 framework only; omit otherwise
 <1–2 sentences on what's distinctive about it, plus a link to its official docs>
 
@@ -149,8 +167,14 @@ This is one folder and one scenario, made of 3–5 parts that each follow the `f
 
 ---
 
+### **What You'll Learn**
+<same fields as in focused mode, covering the whole scenario>
+
+---
+
 ### **Part 1: <title>**
 > **Focus:** <concept>
+> **You'll learn:** <one line: the outcome of this part>
 
 **Requirements**
 <3–5 bullets with signatures>

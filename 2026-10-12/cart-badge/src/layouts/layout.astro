@@ -1,17 +1,30 @@
 ---
-const { title } = Astro.props;
 import UserBadge from "../components/user-badge.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
 ---
 
 <html lang="en">
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
 
-    <style>
+    <!-- Global, because the fallback (written here) and the island root (written in
+         user-badge.astro) must share one box so the swap doesn't shift the header.
+         A scoped style would only reach the component it is written in. -->
+    <style is:global>
       .badge {
-        display: inline-block;
-        min-width: 110px;
-        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        vertical-align: middle;
+        min-width: 8rem;
+        height: 1.5rem;
+        white-space: nowrap;
       }
     </style>
   </head>
@@ -20,9 +33,9 @@ import UserBadge from "../components/user-badge.astro";
     <header>
       <a href="/">Shop</a>
       <UserBadge server:defer>
-        <span slot="fallback" class="badge">
-          Javscript is not enabled. Please enable it.
-        </span>
+        <!-- Part of the cached shell: no user data. Without JavaScript it is all the
+             user sees, so it links to a page that works signed in or out. -->
+        <a slot="fallback" class="badge" href="/account">Account</a>
       </UserBadge>
     </header>
     <main><slot /></main>

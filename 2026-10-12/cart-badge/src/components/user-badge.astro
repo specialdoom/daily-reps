@@ -1,36 +1,31 @@
 ---
-import { getSession } from "../lib/session";
+import { getSession, type Session } from "../lib/session";
 
-Astro.response.headers.set("Cache-Control", "private, nostore");
+// "no-store" needs the hyphen: caches ignore unknown directives, so "nostore"
+// would leave only "private" and let the browser cache keep the badge.
+Astro.response.headers.set("Cache-Control", "private, no-store");
 
-let session = null;
-let template = "";
-
-if (Astro.cookies.has("sid")) {
-  const cookie = Astro.cookies.get("sid");
-  const sid = cookie?.value;
-
-  console.log(sid);
-
-  session = await getSession(sid);
-
-  template =
-    session === null
-      ? `<a href="/sign-in">Sign in</a>`
-      : `${session.name} · ${session?.cartCount}`;
+let session: Session | null = null;
+let failed = false;
+try {
+  // getSession handles a missing sid, so logged-out users get the Sign in link too.
+  session = await getSession(Astro.cookies.get("sid")?.value);
+} catch {
+  failed = true;
 }
 ---
 
-<div>
-  <slot name="fallback">
-    {template}
-  </slot>
-</div>
-
-<style>
-  div {
-    display: inline-block;
-    min-width: 106px;
-    height: 18px;
+<span class="badge">
+  {
+    session ? (
+      <span>
+        {session.name} · <span role="img" aria-label="items in cart">🛒</span>{" "}
+        {session.cartCount}
+      </span>
+    ) : failed ? (
+      <a href="/account">Account</a>
+    ) : (
+      <a href="/sign-in">Sign in</a>
+    )
   }
-</style>
+</span>

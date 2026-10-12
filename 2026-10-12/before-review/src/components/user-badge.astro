@@ -1,0 +1,36 @@
+---
+import { getSession } from "../lib/session";
+
+Astro.response.headers.set("Cache-Control", "private, nostore");
+
+let session = null;
+let template = "";
+
+if (Astro.cookies.has("sid")) {
+  const cookie = Astro.cookies.get("sid");
+  const sid = cookie?.value;
+
+  console.log(sid);
+
+  session = await getSession(sid);
+
+  template =
+    session === null
+      ? `<a href="/sign-in">Sign in</a>`
+      : `${session.name} · ${session?.cartCount}`;
+}
+---
+
+<div>
+  <slot name="fallback">
+    {template}
+  </slot>
+</div>
+
+<style>
+  div {
+    display: inline-block;
+    min-width: 106px;
+    height: 18px;
+  }
+</style>

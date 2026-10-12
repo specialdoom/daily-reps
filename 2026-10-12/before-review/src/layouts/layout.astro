@@ -1,0 +1,30 @@
+---
+const { title } = Astro.props;
+import UserBadge from "../components/user-badge.astro";
+---
+
+<html lang="en">
+  <head>
+    <title>{title}</title>
+
+    <style>
+      .badge {
+        display: inline-block;
+        min-width: 110px;
+        height: 18px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <a href="/">Shop</a>
+      <UserBadge server:defer>
+        <span slot="fallback" class="badge">
+          Javscript is not enabled. Please enable it.
+        </span>
+      </UserBadge>
+    </header>
+    <main><slot /></main>
+  </body>
+</html>

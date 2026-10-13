@@ -1,6 +1,6 @@
 ---
 name: daily-challenge
-description: Generates one new daily frontend engineering challenge into a `YYYY-MM-DD/README.md` folder in this repo and commits it to main. Varies the format (library, component, small app, real-time app, change inside an existing app, HTML/CSS only, debugging) and the stack, often surprising with a post-2018 framework. By default the challenge is small and focused on a single concept (about 30–60 minutes); big topics become a multi-day series of focused parts. Pass `complex` (e.g. "complex challenge on X", "/daily-challenge complex") for one larger challenge made of several small, independently solvable parts. Use when the user asks for a new challenge, "today's challenge", "another problem", "generate a challenge (on <topic>)", the next part of a series, or a challenge for a specific date. Also used by the scheduled daily routine. Do NOT use for solving, testing, or reviewing an existing challenge.
+description: Generates one new daily frontend engineering challenge into a `YYYY-MM-DD/README.md` folder in this repo, plus a ready-to-run starter project when the challenge needs one, and commits it to main. Varies the format (library, component, small app, real-time app, change inside an existing app, HTML/CSS only, debugging) and the stack, often surprising with a post-2018 framework. By default the challenge is small and focused on a single concept (about 30–60 minutes); big topics become a multi-day series of focused parts. Pass `complex` (e.g. "complex challenge on X", "/daily-challenge complex") for one larger challenge made of several small, independently solvable parts. Use when the user asks for a new challenge, "today's challenge", "another problem", "generate a challenge (on <topic>)", the next part of a series, or a challenge for a specific date. Also used by the scheduled daily routine. Do NOT use for solving, testing, or reviewing an existing challenge.
 ---
 
 # Daily Challenge
@@ -70,7 +70,7 @@ In `focused` mode, every challenge must pass all of these checks:
 - **One core concept.** You can name it in a few words, e.g. "abortable debounce", "LRU eviction order", "`aria-activedescendant` focus model" or "signal dependency tracking". If you need "and" to describe it, it's two challenges.
 - **About 30–60 minutes** for a strong engineer.
 - **Small surface.** For a library, one function, class or hook with at most ~3 public methods. For a component or app, one screen with 1–2 interactions. For an inside-an-app task, one change. The solution is roughly 40–150 lines, plus markup and CSS for UI formats.
-- **Setup must be trivial.** Anything beyond `npm create …` plus one or two packages goes into the README as a provided starter or stub.
+- **Setup must be trivial.** Anything beyond `npm create …` plus one or two packages goes into the README as a provided starter or stub, and into the starter project (section 5).
 - **3–5 requirements** and **2–3 edge cases**. Every one of them must exercise the core concept, not neighbouring features.
 - **Stub what isn't the point.** Give a type or a one-line helper instead of asking for it. For example, provide the `Priority` type and an injected clock, and ask only for the ordering logic.
 
@@ -121,7 +121,8 @@ In `focused` mode, every challenge must pass all of these checks:
 ---
 
 ### **Starter**   ← inside-an-app, debug and real-time formats only; omit otherwise
-<the short starter app, buggy snippet or mock server, in fenced code blocks>
+<where the starter project lives and how to run it (`cd <project-name> && npm install && npm run dev`),
+then the short starter app, buggy snippet or mock server, in fenced code blocks>
 
 ---
 
@@ -195,11 +196,41 @@ This is one folder and one scenario, made of 3–5 parts that each follow the `f
 - **(B)** Paste your solution to a part for a review.
 ```
 
-Only create the README. Don't add a solution, tests or starter code; the owner asks for those separately.
+## 5. Create the starter files (when needed)
 
-## 5. Commit and push
+Besides the README, create a **ready-to-run starter project** whenever the owner would otherwise spend the first minutes copying code out of the README or scaffolding a framework. The time box is for the concept, not for setup.
 
-- Commit only the new `YYYY-MM-DD/README.md`. The message format is `YYYY-MM-DD: <message>`, where the date is the challenge folder's date and `<message>` is a short lowercase summary, e.g. `2026-10-07: add daily challenge`.
+**When to create one:**
+- **Always**, when the README has a **Starter** section (inside an existing app, debug / review, real-time with a mock server), or when the challenge needs a framework or meta-framework scaffold (component, small app, real-time app).
+- **Usually**, for library challenges: a minimal TypeScript + Vitest package, plus the entry file with the given types and function signatures stubbed as `throw new Error("TODO")`.
+- **Not**, for HTML/CSS-only challenges whose starter is a single short `index.html` the README already shows in full, unless it needs extra files (images, fonts, a second page).
+
+**Where:** `YYYY-MM-DD/<project-name>/`, using a short kebab-case name that matches the challenge (e.g. `cart-badge`, `ticker`, `feed`). The README's **Starter** section names that folder and says how to run it, e.g. `cd cart-badge && npm install && npm run dev`. Keep the code blocks in the README too, so it still reads standalone.
+
+**What goes in it:**
+- Exactly the starter the README describes, and nothing more:
+  - the given app or component tree;
+  - the buggy snippet;
+  - the mock server, with a `server` script if it needs one;
+  - the injected stubs and types.
+- The minimal project files: `package.json` with **exact pinned versions** of what the README targets, the `dev`/`build`/`test` scripts that apply, `tsconfig.json`, and a `.gitignore` covering `node_modules`, `dist`, `.astro`, `.vite`, `test-results` and the like.
+- Prefer the framework's own scaffold (`npm create vite@latest <name> -- --template …`, `npm create astro@latest …`). Then **remove the demo content** (counters, logos, sample pages, generated `AGENTS.md`/`CLAUDE.md`), so only the challenge's files remain.
+- Commit `package-lock.json`. Never commit `node_modules` or build output.
+
+**What never goes in it:**
+- Any part of the solution. Leave a `// TODO` where the owner's work starts.
+- Tests or a Playwright spec: the owner asks for those through Next Step (A).
+- Hints in comments that give the answer away.
+
+**Check it before committing:**
+- Run `npm install`, then `npm run build` (or the type check), and start it once if it's an app or server.
+- The starter must run and show the starting state the README describes. That state is often a deliberately broken or unfinished one, which is fine, but it must not crash on setup.
+- If the scaffold needs network access and it isn't available, write the files by hand from the README instead, and say so in the commit message.
+
+
+## 6. Commit and push
+
+- Commit only the new `YYYY-MM-DD/README.md` and, if there is one, the starter project `YYYY-MM-DD/<project-name>/`. The message format is `YYYY-MM-DD: <message>`, where the date is the challenge folder's date and `<message>` is a short lowercase summary, e.g. `2026-10-07: add daily challenge`.
   - For a series part, append ` (<series> part N/M)`, e.g. `2026-10-07: add daily challenge (scheduler part 2/4)`.
   - In `complex` mode, append ` (complex)`.
 - Push **directly to `main`**. Do not create or push other branches.

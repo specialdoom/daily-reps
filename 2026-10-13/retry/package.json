@@ -1,0 +1,16 @@
+{
+  "name": "retry",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Daily challenge 2026-10-13: the retry test that passes alone and hangs in CI",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "3.2.7"
+  }
+}

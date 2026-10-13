@@ -33,6 +33,8 @@ A teammate wrote `retry()`, a small helper with exponential backoff, and a test 
 
 ### **Starter**
 
+Ready to run in `retry/`: `cd retry && npm install && npm test`. It has the two files below, pinned to Vitest 3.2.7 and TypeScript 7.0.2, and `npm test` fails exactly as described in **Symptoms**.
+
 `retry.ts` (correct, do not change):
 
 ```ts
@@ -90,7 +92,9 @@ describe('retry', () => {
 });
 ```
 
-**Symptoms:** the first test times out (`Test timed out in 5000ms`); the second test, run alone with `-t "gives up"`, hangs on real timers for ~300 ms and passes, but after the first test it behaves differently, and a `PromiseRejectionHandledWarning` may appear.
+**Symptoms** (checked with Vitest 3.2.7):
+- `npm test`: both tests time out (`Test timed out in 5000ms`). The first never resolves; the second inherits the fake timers the first test left on.
+- `npx vitest run -t "gives up"`: the second test fails immediately with `Timers are not mocked. Try calling "vi.useFakeTimers()" first.` On its own it never had fake timers. It only "had" them before because of test order.
 
 ---
 
@@ -115,5 +119,5 @@ describe('retry', () => {
 ---
 
 ### **Interactive Next Steps**
-- **(A)** Ask for a starter project with the helper and a failing test suite.
+- **(A)** Ask for a hint on the event-loop order, or for an extra test case (e.g. for the jitter stretch).
 - **(B)** Paste your fixed test file for a review of determinism and isolation.

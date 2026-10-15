@@ -4,7 +4,15 @@ import { leaderId, role, startElection, tabId } from "./election";
 import { startFeed } from "./feed";
 
 function App() {
-  useEffect(() => startElection(), []);
+  useEffect(() => {
+    const stop = startElection();
+    window.addEventListener("pagehide", stop);
+    return () => {
+      window.removeEventListener("pagehide", stop);
+      stop();
+    };
+  }, []);
+
   useEffect(() => startFeed(), []);
 
   return (

@@ -23,14 +23,56 @@ const channel = new BroadcastChannel("leader-tab");
  * and a closed or crashed leader is replaced within ~LEADER_TIMEOUT_MS.
  */
 export function startElection(): () => void {
+  let lastHeartbeatAt: number = Date.now();
+  let leaderTimeoutTimerId: number;
+  let heartbeatTimerId: number;
+
   channel.onmessage = (e: MessageEvent<Msg>) => {
-    void e;
-    // TODO
+    if (e.data.type === "heartbeat") {
+      lastHeartbeatAt = e.data.at;
+      leaderId.value = e.data.from;
+      if (role.value === "leader" && e.data.from !== tabId) {
+        if (tabId < e.data.from) {
+          role.value = "follower";
+          clearInterval(heartbeatTimerId);
+        } else {
+          role.value = "leader";
+          leaderId.value = tabId;
+        }
+      }
+    } else if (e.data.type === "resign") {
+      leaderId.value = null;
+      lastHeartbeatAt = LEADER_TIMEOUT_MS;
+    }
   };
 
-  // TODO: decide when to claim leadership, send heartbeats, detect a dead leader.
+  leaderTimeoutTimerId = window.setInterval(() => {
+    if (
+      Date.now() - lastHeartbeatAt > LEADER_TIMEOUT_MS &&
+      leaderId.value !== tabId
+    ) {
+      leaderId.value = tabId;
+      role.value = "leader";
+      heartbeatTimerId = setInterval(() => {
+        channel.postMessage({
+          type: "heartbeat",
+          from: tabId,
+          at: Date.now(),
+        });
+      }, HEARTBEAT_MS);
+    }
+  }, 500);
 
   return () => {
-    // TODO: cleanup (timers, resign if leader)
+    clearInterval(leaderTimeoutTimerId);
+    clearInterval(heartbeatTimerId);
+    if (role.value === "leader") {
+      role.value = "follower";
+      leaderId.value = null;
+      channel.postMessage({
+        type: "resign",
+        from: tabId,
+      });
+    }
   };
 }

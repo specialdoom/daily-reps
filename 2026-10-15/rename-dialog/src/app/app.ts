@@ -17,8 +17,14 @@ import { RenameDialog } from './rename-dialog';
     <app-rename-dialog />
   `,
   styles: `
-    :host { display: block; font-family: system-ui, sans-serif; padding: 1rem; }
-    li { margin: 0.5rem 0; }
+    :host {
+      display: block;
+      font-family: system-ui, sans-serif;
+      padding: 1rem;
+    }
+    li {
+      margin: 0.5rem 0;
+    }
   `,
 })
 export class App {
@@ -27,6 +33,7 @@ export class App {
 
   protected async rename(index: number): Promise<void> {
     const next = await this.dialog().open(this.files()[index]);
+    console.log('here');
     if (next === null) return;
     this.files.update((all) => all.map((n, i) => (i === index ? next : n)));
   }

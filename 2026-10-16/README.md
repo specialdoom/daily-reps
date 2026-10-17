@@ -1,4 +1,5 @@
-### **Daily Frontend Challenge: [CSS] A Reading Progress Bar with Zero JavaScript: Scroll-Driven Animations**
+\
+ ### **Daily Frontend Challenge: [CSS] A Reading Progress Bar with Zero JavaScript: Scroll-Driven Animations**
 
 > **Focus:** binding an animation's progress to scroll position with `animation-timeline: scroll()` · **Time box:** ~40 min
 > **Format:** HTML/CSS only · **Stack:** plain HTML + CSS (no JavaScript, no framework), Chromium 115+ / Safari 26+

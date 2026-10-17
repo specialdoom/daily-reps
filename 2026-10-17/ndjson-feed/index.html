@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NDJSON feed</title>
+    <style>
+      body { font: 16px/1.4 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+      #status { margin: .5rem 0; color: #555; }
+      #status[data-state="error"] { color: #b00020; }
+      ul { list-style: none; padding: 0; max-height: 24rem; overflow: auto; border: 1px solid #ddd; }
+      li { padding: .25rem .5rem; border-bottom: 1px solid #eee; }
+    </style>
+  </head>
+  <body>
+    <h1>Live events</h1>
+    <button id="start">Start</button>
+    <button id="stop" disabled>Stop</button>
+    <p id="status" role="status">idle</p>
+    <ul id="list"></ul>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

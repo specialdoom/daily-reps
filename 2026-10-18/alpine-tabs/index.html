@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account settings</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Account settings</h1>
+      <div class="tabs" x-data="tabs">
+        <div role="tablist" aria-label="Account settings">
+          <template x-for="tab in tabs" :key="tab.id">
+            <button
+              type="button"
+              role="tab"
+              :id="'tab-' + tab.id"
+              :aria-selected="selected === tab.id"
+              :aria-controls="'panel-' + tab.id"
+              :disabled="tab.disabled"
+              @click="select(tab.id)"
+              x-text="tab.label"
+            ></button>
+          </template>
+        </div>
+        <template x-for="tab in tabs" :key="tab.id">
+          <section
+            role="tabpanel"
+            :id="'panel-' + tab.id"
+            :aria-labelledby="'tab-' + tab.id"
+            x-show="selected === tab.id"
+            x-text="tab.content"
+          ></section>
+        </template>
+      </div>
+      <p><a href="#help">Help &amp; support</a></p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

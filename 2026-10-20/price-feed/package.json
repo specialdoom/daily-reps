@@ -1,0 +1,15 @@
+{
+  "name": "price-feed",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Daily challenge 2026-10-20: the async generator that leaks its subscription",
+  "scripts": {
+    "demo": "node --experimental-strip-types src/demo.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "7.0.2"
+  }
+}

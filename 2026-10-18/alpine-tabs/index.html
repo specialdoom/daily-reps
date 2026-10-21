@@ -15,11 +15,13 @@
             <button
               type="button"
               role="tab"
+              :tabindex="selected === tab.id ? 0 : -1"
               :id="'tab-' + tab.id"
               :aria-selected="selected === tab.id"
               :aria-controls="'panel-' + tab.id"
-              :disabled="tab.disabled"
+              :disabled="!!tab.disabled"
               @click="select(tab.id)"
+              @keydown="keydown($event)"
               x-text="tab.label"
             ></button>
           </template>

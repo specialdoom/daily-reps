@@ -25,9 +25,9 @@ The settings page below has a tab list that only works with a mouse: every tab i
 **Where this shows up in practice:** tabs, toolbars, menus, radio groups and listboxes in every design system (Radix, React Aria, Headless UI, Angular CDK).
 
 **Self-check (answer after solving):**
-1. Why not simply give every tab `tabindex="0"`?
-2. What happens when the user Tabs out of the list and back in: which tab should receive focus, and why?
-3. Why is a disabled tab skipped by arrow keys here, while the ARIA pattern allows either choice?
+1. Why not simply give every tab `tabindex="0"`? A: User can only navigate with `Tab` and no keys.
+2. What happens when the user Tabs out of the list and back in: which tab should receive focus, and why? A: I would say the last tab focused.
+3. Why is a disabled tab skipped by arrow keys here, while the ARIA pattern allows either choice? 
 
 ---
 

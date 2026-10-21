@@ -4,11 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "tsc --noEmit",
     "build": "tsc --noEmit && vite build"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "24.19.2",
     "typescript": "5.9.3",
-    "vite": "8.3.4"
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
   }
 }

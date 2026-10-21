@@ -28,10 +28,25 @@ async function start() {
   let count = 0;
   try {
     const res = await fetch("/api/events", { signal: mine.signal });
+    if (!res.body || !res.ok) {
+      throw new Error("nothing to stream");
+    }
+
+    for await (const json of readNdjson<FeedEvent>(res.body)) {
+      const li = document.createElement("li");
+      console.log(json);
+      li.innerText = `#${json.id} ${json.text}`;
+      list.append(li);
+      count++;
+      setStatus("streaming", `streaming ${count} events`);
+    }
+    setStatus("done", `${count} events`);
+
     // TODO: consume res.body with readNdjson and append one <li> per event
     // (`#${id} ${text}`), updating the status as the count grows.
   } catch (err) {
-    if (mine.signal.aborted) setStatus("stopped", `stopped after ${count} events`);
+    if (mine.signal.aborted)
+      setStatus("stopped", `stopped after ${count} events`);
     else setStatus("error", `failed after ${count} events: ${String(err)}`);
   } finally {
     if (controller === mine) {

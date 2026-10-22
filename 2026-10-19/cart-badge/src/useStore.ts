@@ -10,9 +10,15 @@ export function useStore<T>(store: Store<T>): T {
   return correctValue;
 }
 
+function getSnapshot() {}
+
 export function useStoreSelector<T, S>(
   store: Store<T>,
   select: (state: T) => S,
 ): S {
-  return select(store.get());
+  const snapshot = useSyncExternalStore(store.subscribe, () =>
+    select(store.get()),
+  );
+
+  return snapshot;
 }

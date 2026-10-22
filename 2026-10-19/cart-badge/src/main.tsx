@@ -12,12 +12,12 @@ function RestoreCart() {
 }
 
 function CartBadge() {
-  const { items } = useStore(cartStore);
+  const items = useStoreSelector(cartStore, (state) => state.items);
   return <span aria-label={`${items} items in cart`}>🛒 {items}</span>;
 }
 
 function CartTotal() {
-  const { total } = useStore(cartStore);
+  const total = useStoreSelector(cartStore, (state) => state.total);
   return <strong>${total.toFixed(2)}</strong>;
 }
 

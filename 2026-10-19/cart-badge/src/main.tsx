@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { useLayoutEffect } from "react";
 import { cartStore } from "./store";
-import { useStore } from "./useStore";
+import { useStore, useStoreSelector } from "./useStore";
 
 // Restores the saved cart before the browser paints.
 function RestoreCart() {

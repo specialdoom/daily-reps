@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notification settings</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 28rem; margin: 2rem auto; padding: 0 1rem; }
+    fieldset { border: 1px solid #8884; border-radius: .5rem; padding: 1rem; }
+    .switch { display: flex; align-items: center; justify-content: space-between; padding: .5rem 0; }
+
+    /* Current approach: the real checkbox is removed from rendering. */
+    .switch input { display: none; }
+
+    .track {
+      position: relative;
+      width: 2.75rem;
+      height: 1.5rem;
+      border-radius: 999px;
+      background: #888;
+      cursor: pointer;
+    }
+    .track::after {
+      content: "";
+      position: absolute;
+      top: .1875rem;
+      left: .1875rem;
+      width: 1.125rem;
+      height: 1.125rem;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform .15s;
+    }
+    /* TODO: checked state, focus ring, disabled state, forced-colors */
+  </style>
+</head>
+<body>
+  <h1>Notification settings</h1>
+  <fieldset>
+    <legend>Email</legend>
+    <div class="switch">
+      <span id="l1">Product updates</span>
+      <label>
+        <input type="checkbox" role="switch" aria-labelledby="l1" />
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="switch">
+      <span id="l2">Security alerts</span>
+      <label>
+        <input type="checkbox" role="switch" aria-labelledby="l2" checked disabled />
+        <span class="track"></span>
+      </label>
+    </div>
+  </fieldset>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign up</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 22rem; margin: 3rem auto; }
+      label { display: block; margin-block: 1rem 0.25rem; }
+      input { width: 100%; padding: 0.4rem; box-sizing: border-box; }
+      input:user-invalid { outline: 2px solid crimson; }
+      .error { color: crimson; font-size: 0.875rem; min-height: 1.25rem; margin: 0.25rem 0 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Create account</h1>
+    <form id="signup">
+      <label for="password">Password (min 8 characters)</label>
+      <input id="password" name="password" type="password" minlength="8" required />
+
+      <label for="confirm">Confirm password</label>
+      <input id="confirm" name="confirm" type="password" required />
+      <p class="error" id="confirm-error" role="alert"></p>
+
+      <button type="submit">Sign up</button>
+      <p id="status"></p>
+    </form>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

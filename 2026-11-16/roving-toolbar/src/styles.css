@@ -1,0 +1,5 @@
+body { font-family: system-ui, sans-serif; margin: 2rem; }
+[role='toolbar'] { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border: 1px solid #bbb; border-radius: 6px; }
+[role='toolbar'] button { padding: 0.4rem 0.8rem; border: 1px solid transparent; background: #f4f4f4; border-radius: 4px; }
+[role='toolbar'] button:focus-visible { outline: 2px solid #2563eb; }
+[role='toolbar'] button[aria-pressed='true'] { background: #dbeafe; }

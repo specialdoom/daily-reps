@@ -1,0 +1,19 @@
+/* Third-party UI kit. Pretend you cannot edit this file. */
+.page .actions button.btn {
+  background: #e5e7eb;
+  color: #111827;
+  border: 1px solid #9ca3af;
+  border-radius: 2px;
+  padding: 6px 10px;
+  font: 14px/1.2 system-ui, sans-serif;
+}
+
+.page .actions button.btn.btn-danger {
+  background: #b91c1c;
+  color: #fff;
+  border-color: #7f1d1d;
+}
+
+.btn:hover {
+  background: #d1d5db !important;
+}

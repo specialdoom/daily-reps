@@ -1,0 +1,20 @@
+/* Our brand styles. TODO: make the brand button win, without `!important`
+   and without raising selector specificity. */
+.btn-brand {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #3730a3;
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+.page {
+  max-width: 40rem;
+  margin: 2rem auto;
+  font-family: system-ui, sans-serif;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}

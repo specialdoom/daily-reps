@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Files</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; }
+      li { display: flex; justify-content: space-between; align-items: center; padding: .4rem 0; border-bottom: 1px solid #ddd; }
+      dialog { border: 1px solid #888; border-radius: .5rem; padding: 1.25rem; max-width: 22rem; }
+      dialog::backdrop { background: rgb(0 0 0 / .4); }
+      dialog menu { display: flex; gap: .5rem; justify-content: flex-end; padding: 0; margin: 1rem 0 0; }
+      #status { color: #555; min-height: 1.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Files</h1>
+    <ul id="list">
+      <li><span>report.pdf</span><button type="button" class="delete" data-name="report.pdf">Delete</button></li>
+      <li><span>photo.png</span><button type="button" class="delete" data-name="photo.png">Delete</button></li>
+      <li><span>notes.txt</span><button type="button" class="delete" data-name="notes.txt">Delete</button></li>
+    </ul>
+    <p id="status" role="status"></p>
+
+    <dialog id="confirm" aria-labelledby="confirm-title">
+      <form method="dialog">
+        <h2 id="confirm-title">Delete file?</h2>
+        <p>Delete <strong id="confirm-name"></strong>? This can't be undone.</p>
+        <menu>
+          <button value="cancel">Cancel</button>
+          <button value="delete">Delete</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
